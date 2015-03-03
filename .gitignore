@@ -1,0 +1,7 @@
+.*.sw[pon]
+_build/
+setup.log
+setup.data
+*.native
+*.byte
+*.docdir

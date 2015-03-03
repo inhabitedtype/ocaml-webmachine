@@ -1,0 +1,28 @@
+opam-version: "1.2"
+version: "dev"
+maintainer: "Spiros Eliopoulos <spiros@inhabitedtype.com>"
+authors: ["Inhabited Type LLC"]
+license: "PROP"
+
+build: [
+  ["./configure" "--prefix=%{prefix}%"]
+  ["make"]
+]
+install: [
+  ["make" "install"]
+]
+remove: [
+  ["ocamlfind" "remove" "webmachine"]
+]
+
+build-test: [
+  ["./configure" "--enabled-tests"]
+  ["make"]
+  ["make" "test"]
+]
+
+depends: [
+  "ocamlfind" {build}
+  "cohttp"
+  "re"
+]

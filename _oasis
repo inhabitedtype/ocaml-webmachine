@@ -1,0 +1,35 @@
+OASISFormat: 0.4
+Name:        webmachine
+Version:     0.1.0
+Synopsis:    Web Machine
+Authors:     Spiros Eliopoulos <spiros@inhabitedytpe.com>
+Copyrights:  (C) 2015 Inhabited Type LLC
+License:     PROP
+Plugins:     META (0.4), DevFiles (0.4)
+BuildTools:  ocamlbuild
+
+Library webmachine
+  Path:             lib
+  Modules:          Webmachine
+  BuildDepends:     cohttp, re, re.str
+
+Document webmachine
+  Title:                webmachine docs
+  Type:                 ocamlbuild (0.4)
+  BuildTools+:          ocamldoc
+  Install:              true
+  XOCamlBuildPath:      lib
+  XOCamlBuildLibraries: webmachine
+
+Executable test_logic
+  Path:             lib_test
+  MainIs:           test_logic.ml
+  Build$:           flag(tests)
+  CompiledObject:   best
+  Install:          false
+  BuildDepends:     webmachine, cohttp, oUnit (>= 1.0.2)
+
+Test test_logic
+  Run$:             flag(tests)
+  Command:          $test_logic
+  WorkingDirectory: lib_test

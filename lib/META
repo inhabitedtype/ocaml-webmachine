@@ -1,0 +1,12 @@
+# OASIS_START
+# DO NOT EDIT (digest: 602c79bbe96cc8650e01461f19b64088)
+version = "0.1.0"
+description = "Web Machine"
+requires = "cohttp re re.str"
+archive(byte) = "webmachine.cma"
+archive(byte, plugin) = "webmachine.cma"
+archive(native) = "webmachine.cmxa"
+archive(native, plugin) = "webmachine.cmxs"
+exists_if = "webmachine.cma"
+# OASIS_STOP
+

@@ -1,0 +1,33 @@
+# OASIS_START
+# DO NOT EDIT (digest: 294083bc98f4421998b9c70ec834f1b6)
+# Ignore VCS directories, you can use the same kind of rule outside
+# OASIS_START/STOP if you want to exclude directories that contains
+# useless stuff for the build process
+true: annot, bin_annot
+<**/.svn>: -traverse
+<**/.svn>: not_hygienic
+".bzr": -traverse
+".bzr": not_hygienic
+".hg": -traverse
+".hg": not_hygienic
+".git": -traverse
+".git": not_hygienic
+"_darcs": -traverse
+"_darcs": not_hygienic
+# Library webmachine
+"lib/webmachine.cmxs": use_webmachine
+<lib/*.ml{,i,y}>: pkg_cohttp
+<lib/*.ml{,i,y}>: pkg_re
+<lib/*.ml{,i,y}>: pkg_re.str
+# Executable test_logic
+<lib_test/test_logic.{native,byte}>: pkg_cohttp
+<lib_test/test_logic.{native,byte}>: pkg_oUnit
+<lib_test/test_logic.{native,byte}>: pkg_re
+<lib_test/test_logic.{native,byte}>: pkg_re.str
+<lib_test/test_logic.{native,byte}>: use_webmachine
+<lib_test/*.ml{,i,y}>: pkg_cohttp
+<lib_test/*.ml{,i,y}>: pkg_oUnit
+<lib_test/*.ml{,i,y}>: pkg_re
+<lib_test/*.ml{,i,y}>: pkg_re.str
+<lib_test/*.ml{,i,y}>: use_webmachine
+# OASIS_STOP
