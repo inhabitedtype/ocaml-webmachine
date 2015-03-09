@@ -6,6 +6,8 @@
 
 open Cohttp
 
+module Util = Wm_util
+
 module type S = sig
   module IO : Cohttp.S.IO
 

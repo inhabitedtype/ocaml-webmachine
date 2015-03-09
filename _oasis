@@ -10,6 +10,7 @@ BuildTools:  ocamlbuild
 
 Library webmachine
   Path:             lib
+  InternalModules:  Wm_util
   Modules:          Webmachine
   BuildDepends:     cohttp, re, re.str
 
