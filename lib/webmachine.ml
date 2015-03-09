@@ -61,11 +61,9 @@ module type S = sig
   end
 
   type 'body handler =
-    ?body:'body -> request:Request.t -> unit ->
-    (Response.t * 'body * string list) IO.t
+    body:'body -> request:Request.t -> (Response.t * 'body * string list) IO.t
 
   val to_handler : resource:'body resource -> 'body handler
-
   val dispatch : (string * 'body handler) list -> 'body handler
 end
 
@@ -741,11 +739,10 @@ module Make(IO:Cohttp.S.IO) = struct
   end
 
   type 'body handler =
-    ?body:'body -> request:Request.t -> unit ->
-    (Response.t * 'body * string list) IO.t
+    body:'body -> request:Request.t -> (Response.t * 'body * string list) IO.t
 
-  let to_handler ~resource ?body ~request () =
-    let logic = new logic ~resource ~request ?body () in
+  let to_handler ~resource ~body ~request =
+    let logic = new logic ~resource ~request ~body () in
     logic#run
   ;;
 
@@ -753,15 +750,15 @@ module Make(IO:Cohttp.S.IO) = struct
     let table =
       List.map (fun (p, h) -> Re_posix.(compile (re ("^" ^ p)), h)) routes
     in
-    let rec loop ~path ?body ~request = function
+    let rec loop ~path ~body ~request = function
       | []                     ->
         raise Not_found
       | (re, handler)::tbl ->
         if Re.execp re path
-          then handler ?body ~request ()
-          else loop ~path ?body ~request tbl
+          then handler ~body ~request
+          else loop ~path ~body ~request tbl
     in
-    fun ?body ~request () ->
+    fun ~body ~request ->
       let path = Uri.path (Cohttp.Request.uri request) in
-      loop ~path ?body ~request table
+      loop ~path ~body ~request table
 end

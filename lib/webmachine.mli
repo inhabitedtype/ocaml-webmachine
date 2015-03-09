@@ -22,8 +22,7 @@ module type S = sig
   type 'body acceptor = (bool * 'body, 'body) op
 
   type 'body handler =
-    ?body:'body -> request:Request.t -> unit ->
-    (Response.t * 'body * string list) IO.t
+    body:'body -> request:Request.t -> (Response.t * 'body * string list) IO.t
 
   class virtual ['body] resource : object
     constraint 'body = [> `Empty]
