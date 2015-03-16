@@ -702,7 +702,7 @@ module Make(IO:Cohttp.S.IO) = struct
       match self#meth with
       (* The HTTP method could be POST if the request comes via v3o20 *)
       | `OPTIONS | `DELETE | `PUT -> assert false
-      | _    ->
+      | `HEAD | `GET ->
         let _, to_content =
           match content_type with
           | None   -> assert false
@@ -717,10 +717,15 @@ module Make(IO:Cohttp.S.IO) = struct
           (* XXX(seliopou) expires *)
           self#run_provider to_content >>~ fun () ->
           self#encode_body;
-          self#run_op resource#multiple_choices
-          >>~ function
-            | true  -> self#halt 300
-            | false -> self#respond ~status:`OK ()
+          self#v3o18b
+      | _ ->
+        self#v3o18b
+
+    method v3o18b :(Code.status_code * Header.t * 'body) IO.t =
+      self#run_op resource#multiple_choices
+      >>~ function
+        | true  -> self#halt 300
+        | false -> self#respond ~status:`OK ()
 
     method v3o20 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3o20";
