@@ -21,9 +21,6 @@ module type S = sig
   type 'body provider = 'body rd -> ('body r * 'body rd) IO.t
   type 'body acceptor = (bool * 'body, 'body) op
 
-  type 'body handler =
-    body:'body -> request:Request.t -> (Response.t * 'body * string list) IO.t
-
   class virtual ['body] resource : object
     constraint 'body = [> `Empty]
 
@@ -60,6 +57,9 @@ module type S = sig
     method generate_etag : (string option, 'body) op
     method finish_request : (unit, 'body) op
   end
+
+  type 'body handler =
+    body:'body -> request:Request.t -> (Code.status_code * Header.t * 'body * string list) IO.t
 
   val to_handler : resource:('body resource) -> 'body handler
   val dispatch : (string * 'body handler) list -> 'body handler

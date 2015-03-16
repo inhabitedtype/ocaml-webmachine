@@ -407,12 +407,12 @@ let with_test_resource' f =
 ;;
 
 
-let assert_status ~msg (resp, _, _) status =
+let assert_status ~msg (status_code, _, _, _) status =
   assert_equal ~msg ~printer:string_of_int
-    status Code.(code_of_status resp.Response.status)
+    status Code.(code_of_status status_code)
 ;;
 
-let assert_path ~msg (_, _, p1) p2 =
+let assert_path ~msg (_, _, _, p1) p2 =
   let printer s = Printf.sprintf "[%s]" (String.concat "; " s) in
   assert_equal ~msg ~printer p2 p1
 ;;
