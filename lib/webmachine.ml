@@ -498,7 +498,10 @@ module Make(IO:Cohttp.S.IO) = struct
     method v3g7 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3g7";
       self#run_op resource#variances >>~ fun variances ->
-      self#set_response_header "Vary" (String.concat ", " variances);
+      begin match String.concat ", " variances with
+      | ""   -> ()
+      | vary -> self#set_response_header "vary" vary
+      end;
       self#run_op resource#resource_exists
       >>~ function
         | true  -> self#v3g8
