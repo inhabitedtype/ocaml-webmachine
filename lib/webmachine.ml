@@ -284,7 +284,7 @@ module Make(IO:Cohttp.S.IO) = struct
         provider rd
         >>= function
           | `Cont body', rd' ->
-            response_body <- body;
+            response_body <- body';
             rd <- rd';
             k ()
           | `Halt n    , rd' ->
