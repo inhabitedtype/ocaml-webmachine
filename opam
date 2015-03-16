@@ -16,7 +16,7 @@ remove: [
 ]
 
 build-test: [
-  ["./configure" "--enabled-tests"]
+  ["./configure" "--enable-tests"]
   ["make"]
   ["make" "test"]
 ]
