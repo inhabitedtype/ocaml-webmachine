@@ -5,6 +5,8 @@ machines described in [RFC 7231 - Semantics and Content][7231], [RFC 7232 -
 Conditional Requests][7232], [RFC 7234 - Cachcing][7234], and [RFC 7235 -
 Authentication][7235]. This is inspired by Basho's [webmachine][] project.
 
+[![Build Status](https://magnum.travis-ci.com/inhabitedtype/ocaml-webmachine.svg?token=XSg14w1MrphqpyipUNfk&branch=master)](https://magnum.travis-ci.com/inhabitedtype/ocaml-webmachine)
+
 [7231]: http://tools.ietf.org/html/rfc7231
 [7232]: http://tools.ietf.org/html/rfc7232
 [7234]: http://tools.ietf.org/html/rfc7234
