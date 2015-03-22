@@ -8,14 +8,35 @@ open Cohttp
 
 module Util = Wm_util
 
+class ['body] rd ?(resp_headers=Header.init ()) ?(resp_body=`Empty) ?(req_body=`Empty) ~req () =
+object(self)
+  constraint 'body = [> `Empty]
+
+  method meth = req.Request.meth
+  method version = req.Request.version
+  method uri = req.Request.uri
+
+  method req_headers = req.Request.headers
+  method req_body : 'body = req_body
+  method resp_headers = resp_headers
+  method resp_body : 'body = resp_body
+
+  method set_req_body b =
+    new rd ~resp_headers ~resp_body ~req_body:b ~req ()
+
+  method set_req_headers h =
+    let req = { req with Request.headers = h } in
+    new rd ~resp_headers ~resp_body ~req_body  ~req:req ()
+
+  method set_resp_body b =
+    new rd ~resp_headers ~resp_body:b ~req_body ~req ()
+
+  method set_resp_headers h =
+    new rd ~resp_headers:h ~resp_body ~req_body ~req ()
+end
+
 module type S = sig
   module IO : Cohttp.S.IO
-
-  type 'body rd =
-    { request : Request.t
-    ; request_body : 'body
-    ; response_headers : Header.t
-    }
 
   type 'a result =
     | Ok of 'a
@@ -72,12 +93,6 @@ end
 module Make(IO:Cohttp.S.IO) = struct
   module IO = IO
   open IO
-
-  type 'body rd =
-    { request : Request.t
-    ; request_body : 'body
-    ; response_headers : Header.t
-    }
 
   type 'a result =
     | Ok of 'a
@@ -172,11 +187,7 @@ module Make(IO:Cohttp.S.IO) = struct
 
     val resource = resource
     val mutable path = ([] : string list)
-    val mutable rd =
-      { request
-      ; request_body = (body : [> `Empty])
-      ; response_headers = Header.init ()
-      }
+    val mutable rd = new rd ~req_body:body ~req:request ()
     val mutable content_type = None
     val mutable charset = None
     val mutable encoding = None
@@ -198,17 +209,16 @@ module Make(IO:Cohttp.S.IO) = struct
 
     (** [#meth] returns the [Code.meth] of the [Request.t] object. *)
     method private meth =
-      rd.request.Request.meth
+      rd#meth
 
     method private set_response_header k v =
-      rd <- { rd with response_headers =
-        Header.replace rd.response_headers k v }
+      rd <- rd#set_resp_headers (Header.replace rd#resp_headers k v)
 
     method private get_request_header k =
-      Header.get rd.request.Request.headers k
+      Header.get rd#req_headers k
 
     method private get_response_header k =
-      Header.get rd.response_headers k
+      Header.get rd#resp_headers k
 
     method private respond ~status ?body () : (Code.status_code * Header.t * 'body) IO.t =
       let body =
@@ -217,7 +227,7 @@ module Make(IO:Cohttp.S.IO) = struct
         | Some body -> body
       in
       self#run_op resource#finish_request
-      >>~ fun () -> return (status, rd.response_headers, body)
+      >>~ fun () -> return (status, rd#resp_headers, body)
 
     method private halt code : (Code.status_code * Header.t * 'body) IO.t =
       let status = Code.status_of_code code in

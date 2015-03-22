@@ -6,14 +6,32 @@
 
 open Cohttp
 
+class ['body] rd :
+  ?resp_headers:Header.t ->
+  ?resp_body:'body ->
+  ?req_body:'body ->
+  req:Request.t ->
+  unit ->
+object
+  constraint 'body = [> `Empty]
+
+  method meth : Code.meth
+  method version : Code.version
+  method uri : Uri.t
+
+  method req_headers : Header.t
+  method req_body : 'body
+  method resp_headers : Header.t
+  method resp_body : 'body
+
+  method set_req_body : 'body -> 'body rd
+  method set_req_headers : Header.t -> 'body rd
+  method set_resp_body : 'body -> 'body rd
+  method set_resp_headers : Header.t -> 'body rd
+end
+
 module type S = sig
   module IO : Cohttp.S.IO
-
-  type 'body rd =
-    { request : Request.t
-    ; request_body : 'body
-    ; response_headers : Header.t
-    }
 
   type 'a result =
     | Ok of 'a
