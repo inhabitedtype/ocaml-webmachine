@@ -17,10 +17,12 @@ module type S = sig
     ; response_headers : Header.t
     }
 
-  type 'a r = [`Cont of 'a | `Halt of int]
+  type 'a result =
+    | Ok of 'a
+    | Error of int
 
-  type ('a, 'body) op = 'body rd -> ('a r * 'body rd) IO.t
-  type 'body provider = 'body rd -> ('body r * 'body rd) IO.t
+  type ('a, 'body) op = 'body rd -> ('a result * 'body rd) IO.t
+  type 'body provider = 'body rd -> ('body result * 'body rd) IO.t
   type 'body acceptor = (bool * 'body, 'body) op
 
   class virtual ['body] resource : object
@@ -77,13 +79,15 @@ module Make(IO:Cohttp.S.IO) = struct
     ; response_headers : Header.t
     }
 
-  type 'a r = [`Cont of 'a | `Halt of int]
+  type 'a result =
+    | Ok of 'a
+    | Error of int
 
-  type ('a, 'body) op = 'body rd -> ('a r * 'body rd) IO.t
-  type 'body provider = 'body rd -> ('body r * 'body rd) IO.t
+  type ('a, 'body) op = 'body rd -> ('a result * 'body rd) IO.t
+  type 'body provider = 'body rd -> ('body result * 'body rd) IO.t
   type 'body acceptor = (bool * 'body, 'body) op
 
-  let cont (a, b) = return (`Cont a, b)
+  let cont (a, b) = return (Ok a, b)
 
   class virtual ['body] resource = object
     constraint 'body = [> `Empty]
@@ -91,72 +95,72 @@ module Make(IO:Cohttp.S.IO) = struct
     method virtual content_types_provided : ((string * ('body provider)) list, 'body) op
     method virtual content_types_accepted : ((string * ('body acceptor)) list, 'body) op
 
-    method resource_exists (rd:'body rd) : (bool r * 'body rd) IO.t =
+    method resource_exists (rd:'body rd) : (bool result * 'body rd) IO.t =
       cont (true, rd)
-    method service_available (rd:'body rd) : (bool r * 'body rd) IO.t =
+    method service_available (rd:'body rd) : (bool result * 'body rd) IO.t =
       cont (true, rd)
-    method auth_required (rd:'body rd) : (bool r * 'body rd) IO.t =
+    method auth_required (rd:'body rd) : (bool result * 'body rd) IO.t =
       cont (true, rd)
-    method is_authorized (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method is_authorized (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (true, rd)
-    method forbidden (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method forbidden (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (false, rd)
-    method malformed_request (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method malformed_request (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (false, rd)
-    method uri_too_long (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method uri_too_long (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (false, rd)
-    method known_content_type (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method known_content_type (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (true, rd)
-    method valid_content_headers (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method valid_content_headers (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (true, rd)
-    method valid_entity_length (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method valid_entity_length (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (true, rd)
-    method options (rd :'body rd) : ((string * string) list r * 'body rd) IO.t =
+    method options (rd :'body rd) : ((string * string) list result * 'body rd) IO.t =
       cont ([], rd)
-    method allowed_methods (rd :'body rd) : (Code.meth list r * 'body rd) IO.t =
+    method allowed_methods (rd :'body rd) : (Code.meth list result * 'body rd) IO.t =
       cont ([ `GET; `HEAD ], rd)
-    method known_methods (rd :'body rd) : (Code.meth list r * 'body rd) IO.t =
+    method known_methods (rd :'body rd) : (Code.meth list result * 'body rd) IO.t =
       cont ([`GET; `HEAD; `POST; `PUT; `DELETE; `Other "TRACE"; `Other "CONNECT"; `OPTIONS], rd)
-    method delete_resource (rd :'body rd) : ((bool * 'body) r * 'body rd) IO.t =
+    method delete_resource (rd :'body rd) : ((bool * 'body) result * 'body rd) IO.t =
       cont ((false, `Empty), rd)
-    method delete_completed (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method delete_completed (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (true, rd)
-    method process_post (rd :'body rd) : ((bool * 'body) r * 'body rd) IO.t =
+    method process_post (rd :'body rd) : ((bool * 'body) result * 'body rd) IO.t =
       cont ((false, `Empty), rd)
-    method language_available (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method language_available (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (true, rd)
-    method charsets_provided (rd :'body rd) : ((string * ('body -> 'body)) list r * 'body rd) IO.t =
+    method charsets_provided (rd :'body rd) : ((string * ('body -> 'body)) list result * 'body rd) IO.t =
       cont ([], rd)
-    method encodings_provided (rd :'body rd) : ((string * ('body -> 'body)) list r * 'body rd) IO.t =
+    method encodings_provided (rd :'body rd) : ((string * ('body -> 'body)) list result * 'body rd) IO.t =
       cont (["identity", fun x -> x], rd)
-    method variances (rd :'body rd) : (string list r * 'body rd) IO.t =
+    method variances (rd :'body rd) : (string list result * 'body rd) IO.t =
       cont ([], rd)
-    method is_conflict (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method is_conflict (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (false, rd)
-    method multiple_choices (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method multiple_choices (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (false, rd)
-    method previously_existed (rd :'body rd) : (bool r * 'body rd) IO.t =
+    method previously_existed (rd :'body rd) : (bool result * 'body rd) IO.t =
       cont (false, rd)
-    method moved_permanently (rd :'body rd) : (Uri.t option r * 'body rd) IO.t =
+    method moved_permanently (rd :'body rd) : (Uri.t option result * 'body rd) IO.t =
       cont (None, rd)
-    method moved_temporarily (rd :'body rd) : (Uri.t option r * 'body rd) IO.t =
+    method moved_temporarily (rd :'body rd) : (Uri.t option result * 'body rd) IO.t =
       cont (None, rd)
-    method last_modified (rd :'body rd) : (string option r * 'body rd) IO.t =
+    method last_modified (rd :'body rd) : (string option result * 'body rd) IO.t =
       cont (None, rd)
-    method expires (rd :'body rd) : (string option r * 'body rd) IO.t =
+    method expires (rd :'body rd) : (string option result * 'body rd) IO.t =
       cont (None, rd)
-    method generate_etag (rd :'body rd) : (string option r * 'body rd) IO.t =
+    method generate_etag (rd :'body rd) : (string option result * 'body rd) IO.t =
       cont (None, rd)
-    method finish_request (rd :'body rd) : (unit r * 'body rd) IO.t =
+    method finish_request (rd :'body rd) : (unit result * 'body rd) IO.t =
       cont ((), rd)
 
     (* Missing POST is not allowed rn. *
 
-    method post_is_create (rd :'body rd) : (bool * 'body rd) IO.r =
+    method post_is_create (rd :'body rd) : (bool * 'body rd) IO.result =
       cont (false, rd)
-    method allow_missing_post (rd :'body rd) : (bool * 'body rd) IO.r =
+    method allow_missing_post (rd :'body rd) : (bool * 'body rd) IO.result =
       cont (false, rd)
-    method create_path (rd :'body rd) : (string * 'body rd) IO.r =
+    method create_path (rd :'body rd) : (string * 'body rd) IO.result =
       cont ("", rd)
     *)
   end
@@ -235,13 +239,13 @@ module Make(IO:Cohttp.S.IO) = struct
        * consistent. *)
       resource#charsets_provided rd
       >>= function
-        | `Cont [], rd' ->
+        | Ok [], rd' ->
           rd <- rd'; k`Any
-        | `Cont provided, rd' ->
+        | Ok provided, rd' ->
           rd <- rd';
           charset <- Util.choose provided acceptable "iso-885a-1";
           k (`One charset)
-        | `Halt n, rd' ->
+        | Error n, rd' ->
           rd <- rd';
           self#halt n
 
@@ -262,11 +266,11 @@ module Make(IO:Cohttp.S.IO) = struct
       in
       resource#encodings_provided rd
       >>= function
-        | `Cont encodings, rd' ->
+        | Ok encodings, rd' ->
           rd <- rd';
           encoding <- Util.choose encodings acceptable "identity";
           k encoding
-        | `Halt n, rd' ->
+        | Error n, rd' ->
           rd <- rd';
           self#halt n
 
@@ -276,18 +280,18 @@ module Make(IO:Cohttp.S.IO) = struct
     method private run_op : 'a. ('a, 'body) op -> ('a -> (Code.status_code * Header.t * 'body) IO.t) -> (Code.status_code * Header.t * 'body) IO.t =
       fun op k -> op rd
         >>= function
-          | `Cont a, rd' -> rd <- rd'; k a
-          | `Halt n, rd' -> rd <- rd'; self#halt n
+          | Ok a, rd' -> rd <- rd'; k a
+          | Error n, rd' -> rd <- rd'; self#halt n
 
     method private run_provider : 'body provider -> _ -> (Code.status_code * Header.t * 'body) IO.t =
       fun provider k ->
         provider rd
         >>= function
-          | `Cont body', rd' ->
+          | Ok body', rd' ->
             response_body <- body';
             rd <- rd';
             k ()
-          | `Halt n    , rd' ->
+          | Error n , rd' ->
             rd <- rd';
             self#halt n
 

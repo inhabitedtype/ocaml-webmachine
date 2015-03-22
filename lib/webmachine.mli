@@ -15,10 +15,12 @@ module type S = sig
     ; response_headers : Header.t
     }
 
-  type 'a r = [`Cont of 'a | `Halt of int]
+  type 'a result =
+    | Ok of 'a
+    | Error of int
 
-  type ('a, 'body) op = 'body rd -> ('a r * 'body rd) IO.t
-  type 'body provider = 'body rd -> ('body r * 'body rd) IO.t
+  type ('a, 'body) op = 'body rd -> ('a result * 'body rd) IO.t
+  type 'body provider = 'body rd -> ('body result * 'body rd) IO.t
   type 'body acceptor = (bool * 'body, 'body) op
 
   class virtual ['body] resource : object

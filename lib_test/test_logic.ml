@@ -29,7 +29,7 @@ end
 module Webmachine = Webmachine.Make(Id)
 open Id
 let run = Id.run
-let cont (a, b) = return (`Cont a, b)
+let cont (a, b) = return (Webmachine.Ok a, b)
 
 open Cohttp
 
