@@ -41,6 +41,9 @@ module type S = sig
   type 'body provider = 'body rd -> ('body result * 'body rd) IO.t
   type 'body acceptor = (bool * 'body, 'body) op
 
+  val continue : 'a -> ('a, 'body) op
+  val respond : ?body:'body -> int -> ('a, 'body) op
+
   class virtual ['body] resource : object
     constraint 'body = [> `Empty]
 
