@@ -38,7 +38,7 @@ module type S = sig
     | Error of int
 
   type ('a, 'body) op = 'body rd -> ('a result * 'body rd) IO.t
-  type 'body provider = 'body rd -> ('body result * 'body rd) IO.t
+  type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
   val continue : 'a -> ('a, 'body) op
