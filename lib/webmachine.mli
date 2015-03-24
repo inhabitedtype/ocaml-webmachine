@@ -39,7 +39,7 @@ module type S = sig
 
   type ('a, 'body) op = 'body rd -> ('a result * 'body rd) IO.t
   type 'body provider = 'body rd -> ('body result * 'body rd) IO.t
-  type 'body acceptor = (bool * 'body, 'body) op
+  type 'body acceptor = (bool, 'body) op
 
   val continue : 'a -> ('a, 'body) op
   val respond : ?body:'body -> int -> ('a, 'body) op
@@ -63,9 +63,9 @@ module type S = sig
     method options : ((string * string) list, 'body) op
     method allowed_methods : (Code.meth list, 'body) op
     method known_methods : (Code.meth list, 'body) op
-    method delete_resource : ((bool * 'body), 'body) op
+    method delete_resource : (bool, 'body) op
     method delete_completed : (bool, 'body) op
-    method process_post : ((bool * 'body), 'body) op
+    method process_post : (bool, 'body) op
     method language_available : (bool, 'body) op
     method charsets_provided : ((string * ('body -> 'body)) list, 'body) op
     method encodings_provided : ((string * ('body -> 'body)) list, 'body) op

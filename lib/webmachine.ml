@@ -44,7 +44,7 @@ module type S = sig
 
   type ('a, 'body) op = 'body rd -> ('a result * 'body rd) IO.t
   type 'body provider = 'body rd -> ('body result * 'body rd) IO.t
-  type 'body acceptor = (bool * 'body, 'body) op
+  type 'body acceptor = (bool, 'body) op
 
   val continue : 'a -> ('a, 'body) op
   val respond : ?body:'body -> int -> ('a, 'body) op
@@ -68,9 +68,9 @@ module type S = sig
     method options : ((string * string) list, 'body) op
     method allowed_methods : (Code.meth list, 'body) op
     method known_methods : (Code.meth list, 'body) op
-    method delete_resource : ((bool * 'body), 'body) op
+    method delete_resource : (bool, 'body) op
     method delete_completed : (bool, 'body) op
-    method process_post : ((bool * 'body), 'body) op
+    method process_post : (bool, 'body) op
     method language_available : (bool, 'body) op
     method charsets_provided : ((string * ('body -> 'body)) list, 'body) op
     method encodings_provided : ((string * ('body -> 'body)) list, 'body) op
@@ -103,7 +103,7 @@ module Make(IO:Cohttp.S.IO) = struct
 
   type ('a, 'body) op = 'body rd -> ('a result * 'body rd) IO.t
   type 'body provider = 'body rd -> ('body result * 'body rd) IO.t
-  type 'body acceptor = (bool * 'body, 'body) op
+  type 'body acceptor = (bool, 'body) op
 
   let continue x rd = return (Ok x, rd)
 
@@ -143,12 +143,12 @@ module Make(IO:Cohttp.S.IO) = struct
       continue [ `GET; `HEAD ] rd
     method known_methods (rd :'body rd) : (Code.meth list result * 'body rd) IO.t =
       continue [`GET; `HEAD; `POST; `PUT; `DELETE; `Other "TRACE"; `Other "CONNECT"; `OPTIONS] rd
-    method delete_resource (rd :'body rd) : ((bool * 'body) result * 'body rd) IO.t =
-      continue (false, `Empty) rd
+    method delete_resource (rd :'body rd) : (bool result * 'body rd) IO.t =
+      continue false rd
     method delete_completed (rd :'body rd) : (bool result * 'body rd) IO.t =
       continue true rd
-    method process_post (rd :'body rd) : ((bool * 'body) result * 'body rd) IO.t =
-      continue (false, `Empty) rd
+    method process_post (rd :'body rd) : (bool result * 'body rd) IO.t =
+      continue false rd
     method language_available (rd :'body rd) : (bool result * 'body rd) IO.t =
       continue true rd
     method charsets_provided (rd :'body rd) : ((string * ('body -> 'body)) list result * 'body rd) IO.t =
@@ -211,7 +211,7 @@ module Make(IO:Cohttp.S.IO) = struct
         | None        -> fun x -> x
         | Some (_, f) -> f
       in
-      response_body <- ef (cf response_body)
+      rd <- rd#set_resp_body (ef (cf rd#resp_body))
 
     (** [#meth] returns the [Code.meth] of the [Request.t] object. *)
     method private meth =
@@ -229,7 +229,7 @@ module Make(IO:Cohttp.S.IO) = struct
     method private respond ~status ?body () : (Code.status_code * Header.t * 'body) IO.t =
       let body =
         match body with
-        | None -> response_body
+        | None -> rd#resp_body
         | Some body -> body
       in
       self#run_op resource#finish_request
@@ -326,8 +326,7 @@ module Make(IO:Cohttp.S.IO) = struct
         | None                -> self#halt 415
         | Some(_, of_content) ->
           self#run_op of_content
-          >>~ function (complete, body) ->
-            response_body <- body;
+          >>~ function complete ->
             if complete then
               self#encode_body;
             k complete
@@ -676,8 +675,7 @@ module Make(IO:Cohttp.S.IO) = struct
     method v3m20 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3m20";
       self#run_op resource#delete_resource
-      >>~ fun (deleted, body') ->
-        response_body <- body';
+      >>~ fun deleted ->
         if deleted then
           self#run_op resource#delete_completed
           >>~ function
@@ -689,9 +687,8 @@ module Make(IO:Cohttp.S.IO) = struct
     method v3n11 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3n11";
       self#run_op resource#process_post
-      >>~ fun (executed, body') ->
+      >>~ fun executed ->
         if executed then begin
-          response_body <- body';
           self#encode_body;
           match self#get_response_header "location" with
           | None   -> self#v3p11
