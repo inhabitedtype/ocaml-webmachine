@@ -29,7 +29,6 @@ end
 module Webmachine = Webmachine.Make(Id)
 open Id
 let run = Id.run
-let cont (a, b) = return (`Cont a, b)
 
 open Cohttp
 
@@ -38,7 +37,7 @@ let http_1_1_methods =
   [`GET; `HEAD; `POST; `PUT; `DELETE; `Other "TRACE"; `Other "CONNECT"; `OPTIONS]
 let default_allowed_methods = [`GET; `HEAD; `PUT]
 
-let to_html rd = cont (`String "<html><body>Foo</body></html>", rd)
+let to_html rd = Webmachine.continue (`String "<html><body>Foo</body></html>") rd
 
 class test_resource = object
   (* A configurable resource for testing. Every method on the resource has a
@@ -53,9 +52,9 @@ class test_resource = object
   val _content_types_accepted = ref []
 
   method content_types_provided rd =
-    cont (!_content_types_provided, rd)
+    Webmachine.continue !_content_types_provided rd
   method content_types_accepted rd =
-    cont (!_content_types_accepted, rd)
+    Webmachine.continue !_content_types_accepted rd
 
   method set_content_types_provided v =
     _content_types_provided := v
@@ -75,9 +74,9 @@ class test_resource = object
   val _options = ref []
   val _allowed_methods = ref [`GET; `HEAD]
   val _known_methods = ref [`GET; `HEAD; `POST; `PUT; `DELETE; `Other "TRACE"; `Other "CONNECT"; `OPTIONS]
-  val _delete_resource = ref (false, `Empty)
+  val _delete_resource = ref false
   val _delete_completed = ref true
-  val _process_post = ref (false, `Empty)
+  val _process_post = ref false
   val _language_available = ref true
   val _charsets_provided = ref []
   val _encodings_provided = ref ["identity", fun x -> x]
@@ -93,63 +92,63 @@ class test_resource = object
   val _finish_request = ref ()
 
   method resource_exists rd =
-    cont (!_resource_exits, rd)
+    Webmachine.continue !_resource_exits rd
   method service_available rd =
-    cont (!_service_available, rd)
+    Webmachine.continue !_service_available rd
   method auth_required rd =
-    cont (!_auth_required, rd)
+    Webmachine.continue !_auth_required rd
   method is_authorized rd =
-    cont (!_is_authorized, rd)
+    Webmachine.continue !_is_authorized rd
   method forbidden rd =
-    cont (!_forbidden, rd)
+    Webmachine.continue !_forbidden rd
   method malformed_request rd =
-    cont (!_malformed_request, rd)
+    Webmachine.continue !_malformed_request rd
   method uri_too_long rd =
-    cont (!_uri_too_long, rd)
+    Webmachine.continue !_uri_too_long rd
   method known_content_type rd =
-    cont (!_known_content_type, rd)
+    Webmachine.continue !_known_content_type rd
   method valid_content_headers rd =
-    cont (!_valid_content_headers, rd)
+    Webmachine.continue !_valid_content_headers rd
   method valid_entity_length rd =
-    cont (!_valid_entity_length, rd)
+    Webmachine.continue !_valid_entity_length rd
   method options rd =
-    cont (!_options, rd)
+    Webmachine.continue !_options rd
   method allowed_methods rd =
-    cont (!_allowed_methods, rd)
+    Webmachine.continue !_allowed_methods rd
   method known_methods rd =
-    cont (!_known_methods, rd)
+    Webmachine.continue !_known_methods rd
   method delete_resource rd =
-    cont (!_delete_resource, rd)
+    Webmachine.continue !_delete_resource rd
   method delete_completed rd =
-    cont (!_delete_completed, rd)
+    Webmachine.continue !_delete_completed rd
   method process_post rd =
-    cont (!_process_post, rd)
+    Webmachine.continue !_process_post rd
   method language_available rd =
-    cont (!_language_available, rd)
+    Webmachine.continue !_language_available rd
   method charsets_provided rd =
-    cont (!_charsets_provided, rd)
+    Webmachine.continue !_charsets_provided rd
   method encodings_provided rd =
-    cont (!_encodings_provided, rd)
+    Webmachine.continue !_encodings_provided rd
   method variances rd =
-    cont (!_variances, rd)
+    Webmachine.continue !_variances rd
   method is_conflict rd =
-    cont (!_is_conflict, rd)
+    Webmachine.continue !_is_conflict rd
   method multiple_choices rd =
-    cont (!_multiple_choices, rd)
+    Webmachine.continue !_multiple_choices rd
   method previously_existed rd =
-    cont (!_previously_existed, rd)
+    Webmachine.continue !_previously_existed rd
   method moved_permanently rd =
-    cont (!_moved_permanently, rd)
+    Webmachine.continue !_moved_permanently rd
   method moved_temporarily rd =
-    cont (!_moved_temporarily, rd)
+    Webmachine.continue !_moved_temporarily rd
   method last_modified rd =
-    cont (!_last_modified, rd)
+    Webmachine.continue !_last_modified rd
   method expires rd =
-    cont (!_expires, rd)
+    Webmachine.continue !_expires rd
   method generate_etag rd =
-    cont (!_generate_etag, rd)
+    Webmachine.continue !_generate_etag rd
   method finish_request rd =
-    cont (!_finish_request, rd)
+    Webmachine.continue !_finish_request rd
 
   method set_resource_exists v =
     _resource_exits := v
