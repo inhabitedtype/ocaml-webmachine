@@ -85,7 +85,9 @@ module type S = sig
     body:'body -> request:Request.t -> (Code.status_code * Header.t * 'body * string list) IO.t
 
   val to_handler : resource:('body resource) -> 'body handler
-  val dispatch : (string * 'body handler) list -> 'body handler
+  val dispatch :
+    not_found:('body -> Request.t -> (Header.t * 'body) IO.t) ->
+    (string * 'body handler) list -> 'body handler
 end
 
 module Make(IO:Cohttp.S.IO) : S

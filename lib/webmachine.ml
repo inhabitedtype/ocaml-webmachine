@@ -90,7 +90,9 @@ module type S = sig
     body:'body -> request:Request.t -> (Code.status_code * Header.t * 'body * string list) IO.t
 
   val to_handler : resource:'body resource -> 'body handler
-  val dispatch : (string * 'body handler) list -> 'body handler
+  val dispatch :
+    not_found:('body -> Request.t -> (Header.t * 'body) IO.t) ->
+    (string * 'body handler) list -> 'body handler
 end
 
 module Make(IO:Cohttp.S.IO) = struct
@@ -775,13 +777,14 @@ module Make(IO:Cohttp.S.IO) = struct
     logic#run
   ;;
 
-  let dispatch routes =
+  let dispatch ~not_found routes =
     let table =
       List.map (fun (p, h) -> Re_posix.(compile (re ("^" ^ p)), h)) routes
     in
     let rec loop ~path ~body ~request = function
       | []                     ->
-        raise Not_found
+        not_found body request
+        >>= fun (headers, body) -> return (`Not_found, headers, body, [])
       | (re, handler)::tbl ->
         if Re.execp re path
           then handler ~body ~request
