@@ -6,15 +6,7 @@
 
 open Cohttp
 
-class ['body] rd :
-  ?resp_headers:Header.t ->
-  ?resp_body:'body ->
-  ?req_body:'body ->
-  disp_path:string ->
-  path_info:(string * string) list ->
-  req:Request.t ->
-  unit ->
-object
+class type ['body] rd = object
   constraint 'body = [> `Empty]
 
   method meth : Code.meth
