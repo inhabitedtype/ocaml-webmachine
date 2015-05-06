@@ -77,3 +77,57 @@ module MediaType = struct
     let pred m = List.exists (media_match m) ranges in
     try Some(List.find pred provided) with Not_found -> None
 end
+
+module Dispatch = struct
+  let path_split =
+    let open Re in
+    split (compile (char '/'))
+
+  let path_match ps ms =
+    let rec loop ps ms acc =
+      match ps, ms with
+      | _ , [] -> Some (acc, ps)
+      | [], _  -> None
+      | p::ps', (`L l)::ms' ->
+        if p = l then loop ps' ms' acc else None
+      | p::ps', (`M m)::ms' ->
+        loop ps' ms' ((m, p) :: acc)
+    in
+    loop ps ms []
+
+  let parse_match m =
+    let ps = path_split m in
+    let star, ps' =
+      let l = List.length ps in
+      if l > 0 && List.nth ps (l - 1) = "*" then
+        false, List.(rev (tl (rev ps)))
+      else
+        true, ps
+    in
+    let ms =
+      List.map (fun p ->
+        let len = String.length p in
+        if len > 0 && String.get p 0 = ':' then
+          `M String.(sub p 1 (len - 1))
+        else
+          `L p)
+      ps'
+    in
+    ms, star
+
+  let select choices path =
+    let ps = path_split path in
+    let rec loop = function
+      | []          -> None
+      | (ms, exact, x)::xs ->
+        begin match path_match ps ms with
+        | None -> loop xs
+        | Some(assignment, rest) ->
+          if List.length rest = 0 || (not exact) then
+            Some (x, assignment, String.concat "/" rest)
+          else
+            loop xs
+        end
+    in
+    loop choices
+end

@@ -8,7 +8,11 @@ open Cohttp
 
 module Util = Wm_util
 
-class ['body] rd ?(resp_headers=Header.init ()) ?(resp_body=`Empty) ?(req_body=`Empty) ~req () =
+class ['body] rd
+  ?(resp_headers=Header.init ())
+  ?(resp_body=`Empty)
+  ?(req_body=`Empty)
+  ~disp_path ~path_info ~req () =
 object(self)
   constraint 'body = [> `Empty]
 
@@ -22,17 +26,23 @@ object(self)
   method resp_body : 'body = resp_body
 
   method set_req_body b =
-    new rd ~resp_headers ~resp_body ~req_body:b ~req ()
+    new rd ~resp_headers ~resp_body ~req_body:b ~disp_path ~path_info ~req ()
 
   method set_req_headers h =
     let req = { req with Request.headers = h } in
-    new rd ~resp_headers ~resp_body ~req_body  ~req:req ()
+    new rd ~resp_headers ~resp_body ~req_body ~disp_path ~path_info ~req:req ()
 
   method set_resp_body b =
-    new rd ~resp_headers ~resp_body:b ~req_body ~req ()
+    new rd ~resp_headers ~resp_body:b ~req_body ~disp_path ~path_info~req ()
 
   method set_resp_headers h =
-    new rd ~resp_headers:h ~resp_body ~req_body ~req ()
+    new rd ~resp_headers:h ~resp_body ~req_body ~disp_path ~path_info~req ()
+
+  method disp_path : string =
+    disp_path
+
+  method path_info (key:string) : string =
+    List.assoc key path_info
 end
 
 module type S = sig
@@ -86,13 +96,19 @@ module type S = sig
     method finish_request : (unit, 'body) op
   end
 
-  type 'body handler =
-    body:'body -> request:Request.t -> (Code.status_code * Header.t * 'body * string list) IO.t
+  val to_handler :
+    resource:('body resource) -> body:'body -> request:Request.t ->
+    (Code.status_code * Header.t * 'body * string list) IO.t
 
-  val to_handler : resource:'body resource -> 'body handler
+  val dispatch' :
+    (string * (unit -> 'body resource)) list ->
+    body:'body -> request:Request.t ->
+    (Code.status_code * Header.t * 'body * string list) option IO.t
+
   val dispatch :
-    not_found:('body -> Request.t -> (Header.t * 'body) IO.t) ->
-    (string * 'body handler) list -> 'body handler
+    ([`M of string | `L of string] list * bool * (unit -> 'body resource)) list ->
+    body:'body -> request:Request.t ->
+    (Code.status_code * Header.t * 'body * string list) option IO.t
 end
 
 module Make(IO:Cohttp.S.IO) = struct
@@ -191,12 +207,12 @@ module Make(IO:Cohttp.S.IO) = struct
 
   let (>>~) m f = m f
 
-  class ['body] logic ~(resource:'body resource) ~request ?(body=`Empty) () = object(self)
+  class ['body] logic ~(resource:'body resource) ~request ~disp_path ~path_info ?(body=`Empty) () = object(self)
     constraint 'body = [> `Empty]
 
     val resource = resource
     val mutable path = ([] : string list)
-    val mutable rd = new rd ~req_body:body ~req:request ()
+    val mutable rd = new rd ~req_body:body ~disp_path ~path_info ~req:request ()
     val mutable content_type = None
     val mutable charset = None
     val mutable encoding = None
@@ -769,28 +785,24 @@ module Make(IO:Cohttp.S.IO) = struct
       | Some _ -> self#respond ~status:`Created ()
   end
 
-  type 'body handler =
-    body:'body -> request:Request.t -> (Code.status_code * Header.t * 'body * string list) IO.t
-
   let to_handler ~resource ~body ~request =
-    let logic = new logic ~resource ~request ~body () in
+    let logic = new logic ~resource ~request ~path_info:[] ~disp_path:"" ~body () in
     logic#run
   ;;
 
-  let dispatch ~not_found routes =
-    let table =
-      List.map (fun (p, h) -> Re_posix.(compile (re ("^" ^ p)), h)) routes
-    in
-    let rec loop ~path ~body ~request = function
-      | []                     ->
-        not_found body request
-        >>= fun (headers, body) -> return (`Not_found, headers, body, [])
-      | (re, handler)::tbl ->
-        if Re.execp re path
-          then handler ~body ~request
-          else loop ~path ~body ~request tbl
-    in
+  let dispatch table =
     fun ~body ~request ->
       let path = Uri.path (Cohttp.Request.uri request) in
-      loop ~path ~body ~request table
+      match Util.Dispatch.select table path with
+      | None -> return None
+      | Some(r, path_info, disp_path) ->
+        let resource = r () in
+        let logic = new logic ~resource ~request ~body ~path_info ~disp_path () in
+        logic#run >>= fun x -> return (Some x)
+
+  let dispatch' table =
+    dispatch (List.map (fun (m, r) ->
+      let m', s = Util.Dispatch.parse_match m in
+      (m', s, r))
+    table)
 end
