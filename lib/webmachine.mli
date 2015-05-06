@@ -6,13 +6,7 @@
 
 open Cohttp
 
-class ['body] rd :
-  ?resp_headers:Header.t ->
-  ?resp_body:'body ->
-  ?req_body:'body ->
-  req:Request.t ->
-  unit ->
-object
+class type ['body] rd = object
   constraint 'body = [> `Empty]
 
   method meth : Code.meth
@@ -28,6 +22,9 @@ object
   method set_req_headers : Header.t -> 'body rd
   method set_resp_body : 'body -> 'body rd
   method set_resp_headers : Header.t -> 'body rd
+
+  method disp_path : string
+  method path_info : string -> string
 end
 
 module type S = sig
@@ -81,13 +78,19 @@ module type S = sig
     method finish_request : (unit, 'body) op
   end
 
-  type 'body handler =
-    body:'body -> request:Request.t -> (Code.status_code * Header.t * 'body * string list) IO.t
+  val to_handler :
+    resource:('body resource) -> body:'body -> request:Request.t ->
+    (Code.status_code * Header.t * 'body * string list) IO.t
 
-  val to_handler : resource:('body resource) -> 'body handler
+  val dispatch' :
+    (string * (unit -> 'body resource)) list ->
+    body:'body -> request:Request.t ->
+    (Code.status_code * Header.t * 'body * string list) option IO.t
+
   val dispatch :
-    not_found:('body -> Request.t -> (Header.t * 'body) IO.t) ->
-    (string * 'body handler) list -> 'body handler
+    ([`M of string | `L of string] list * bool * (unit -> 'body resource)) list ->
+    body:'body -> request:Request.t ->
+    (Code.status_code * Header.t * 'body * string list) option IO.t
 end
 
 module Make(IO:Cohttp.S.IO) : S

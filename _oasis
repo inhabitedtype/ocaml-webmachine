@@ -30,7 +30,20 @@ Executable test_logic
   Install:          false
   BuildDepends:     webmachine, cohttp, oUnit (>= 1.0.2)
 
+Executable test_dispatch
+  Path:             lib_test
+  MainIs:           test_dispatch.ml
+  Build$:           flag(tests)
+  CompiledObject:   best
+  Install:          false
+  BuildDepends:     webmachine, cohttp, oUnit (>= 1.0.2)
+
 Test test_logic
   Run$:             flag(tests)
   Command:          $test_logic
+  WorkingDirectory: lib_test
+
+Test test_dispatch
+  Run$:             flag(tests)
+  Command:          $test_dispatch
   WorkingDirectory: lib_test
