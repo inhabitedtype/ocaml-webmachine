@@ -61,24 +61,28 @@ module MediaType = struct
   let compare_q (q1,_) (q2,_) =
     compare q1 q2
 
-  let media_match (type_, _) =
-    let type_, subtype = match Re_str.(split (regexp "/") type_) with
-    | [type_; subtype] -> type_, subtype
-    | _ -> assert false
+  let media_match (_, (range, _)) (type_, _) =
+    let type_, subtype =
+      match Re_str.(split (regexp "/") type_) with
+      | [x; y] -> x, y
+      | _      -> assert false
     in
     let open Accept in
-    function
-    | _, (AnyMedia                    , _)  -> true
-    | _, (AnyMediaSubtype type_'      , _) -> type_ = type_'
-    | _, (MediaType (type_', subtype'), _) -> type_ = type_' && subtype = subtype'
+    match range with
+    | AnyMedia                    -> true
+    | AnyMediaSubtype type_'       -> type_' = type_
+    | MediaType (type_', subtype') -> type_' = type_ && subtype' = subtype
 
   let match_header provided header =
     (* sort in descending order of quality *)
     let ranges = List.sort (fun (q1, _) (q2, _) -> compare q2 q1)
       Accept.(media_ranges header)
     in
-    let pred m = List.exists (media_match m) ranges in
-    try Some(List.find pred provided) with Not_found -> None
+    let rec loop = function
+      | [] -> None
+      | r::rs -> try Some(List.find (media_match r) provided) with Not_found -> loop rs
+    in
+    loop ranges
 end
 
 module Dispatch = struct
