@@ -73,7 +73,10 @@ module MediaType = struct
     | _, (MediaType (type_', subtype'), _) -> type_ = type_' && subtype = subtype'
 
   let match_header provided header =
-    let ranges = List.sort compare_q Accept.(media_ranges header) in
+    (* sort in descending order of quality *)
+    let ranges = List.sort (fun (q1, _) (q2, _) -> compare q2 q1)
+      Accept.(media_ranges header)
+    in
     let pred m = List.exists (media_match m) ranges in
     try Some(List.find pred provided) with Not_found -> None
 end
