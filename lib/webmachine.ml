@@ -739,7 +739,7 @@ module Make(IO:Cohttp.S.IO) = struct
       self#d "v3o18";
       match self#meth with
       (* The HTTP method could be POST if the request comes via v3o20 *)
-      | `OPTIONS | `DELETE | `PUT -> assert false
+      | `OPTIONS | `PUT -> assert false
       | `HEAD | `GET ->
         let _, to_content =
           match content_type with
