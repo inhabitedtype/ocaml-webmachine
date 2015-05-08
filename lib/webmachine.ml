@@ -41,7 +41,10 @@ object(self)
   method disp_path : string =
     disp_path
 
-  method path_info (key:string) : string =
+  method path_info (key:string) : string option =
+    try Some(self#path_info_exn key) with Not_found -> None
+
+  method path_info_exn (key:string) : string  =
     List.assoc key path_info
 end
 

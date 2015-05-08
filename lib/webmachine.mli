@@ -24,7 +24,8 @@ class type ['body] rd = object
   method set_resp_headers : Header.t -> 'body rd
 
   method disp_path : string
-  method path_info : string -> string
+  method path_info : string -> string option
+  method path_info_exn : string -> string
 end
 
 module type S = sig
