@@ -56,7 +56,7 @@ class param_path key = object
 
   method content_types_provided rd =
     Webmachine.continue [
-      ("application/text", Webmachine.continue (`String (rd#path_info key)))
+      ("application/text", Webmachine.continue (`String (rd#path_info_exn key)))
     ] rd
 
   method content_types_accepted rd =
