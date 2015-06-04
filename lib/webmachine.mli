@@ -116,7 +116,8 @@ module type S = sig
   end
 
   val to_handler :
-    resource:('body resource) -> body:'body -> request:Request.t ->
+    ?dispatch_path:string -> ?path_info:(string * string) list ->
+    resource:('body resource) -> body:'body -> request:Request.t -> unit ->
     (Code.status_code * Header.t * 'body * string list) IO.t
 
   val dispatch' :

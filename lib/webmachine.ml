@@ -112,7 +112,8 @@ module type S = sig
   end
 
   val to_handler :
-    resource:('body resource) -> body:'body -> request:Request.t ->
+    ?dispatch_path:string -> ?path_info:(string * string) list ->
+    resource:('body resource) -> body:'body -> request:Request.t -> unit ->
     (Code.status_code * Header.t * 'body * string list) IO.t
 
   val dispatch' :
@@ -222,7 +223,7 @@ module Make(IO:IO) = struct
 
   let (>>~) m f = m f
 
-  class ['body] logic ~(resource:'body resource) ~request ~dispatch_path ~path_info ?(body=`Empty) () = object(self)
+  class ['body] logic ~(resource:'body resource) ?(dispatch_path="") ?(path_info=[]) ~request ?(body=`Empty) () = object(self)
     constraint 'body = [> `Empty]
 
     val resource = resource
@@ -800,8 +801,8 @@ module Make(IO:IO) = struct
       | Some _ -> self#respond ~status:`Created ()
   end
 
-  let to_handler ~resource ~body ~request =
-    let logic = new logic ~resource ~request ~path_info:[] ~dispatch_path:"" ~body () in
+  let to_handler ?dispatch_path ?path_info ~resource ~body ~request () =
+    let logic = new logic ?dispatch_path ?path_info ~resource ~body ~request () in
     logic#run
   ;;
 
@@ -812,8 +813,8 @@ module Make(IO:IO) = struct
       | None -> return None
       | Some(r, path_info, dispatch_path) ->
         let resource = r () in
-        let logic = new logic ~resource ~request ~body ~path_info ~dispatch_path () in
-        logic#run >>= fun x -> return (Some x)
+        to_handler ~dispatch_path ~path_info ~resource ~body ~request ()
+        >>= fun x -> return (Some x)
 
   let dispatch' table =
     dispatch (List.map (fun (m, r) ->

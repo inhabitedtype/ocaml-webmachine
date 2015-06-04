@@ -382,7 +382,7 @@ let with_test_resource f =
   let resource, logic =
     let resource = new test_resource in
     let logic = Webmachine.to_handler ~resource:(resource :> [> `Empty] Webmachine.resource) in
-    resource, (fun request -> run (logic ~body:`Empty ~request))
+    resource, (fun request -> run (logic ~body:`Empty ~request ()))
   in
   logic (f resource)
 ;;
@@ -391,7 +391,7 @@ let with_test_resource' f =
   let resource, logic =
     let resource = new test_resource in
     let logic = Webmachine.to_handler ~resource:(resource :> [> `Empty] Webmachine.resource) in
-    resource, (fun (request, body) -> run (logic ~body ~request))
+    resource, (fun (request, body) -> run (logic ~body ~request ()))
   in
   logic (f resource)
 ;;
