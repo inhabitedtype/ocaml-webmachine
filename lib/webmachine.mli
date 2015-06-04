@@ -6,28 +6,6 @@
 
 open Cohttp
 
-class type ['body] rd = object
-  constraint 'body = [> `Empty]
-
-  method meth : Code.meth
-  method version : Code.version
-  method uri : Uri.t
-
-  method req_headers : Header.t
-  method req_body : 'body
-  method resp_headers : Header.t
-  method resp_body : 'body
-
-  method set_req_body : 'body -> 'body rd
-  method set_req_headers : Header.t -> 'body rd
-  method set_resp_body : 'body -> 'body rd
-  method set_resp_headers : Header.t -> 'body rd
-
-  method disp_path : string
-  method path_info : string -> string option
-  method path_info_exn : string -> string
-end
-
 (** The [IO] module signature abstracts over monadic futures library. It is a
     much reduced version of the module signature that appears in Cohttp, and as
     such is compatible with any module that conforms to [Cohttp.S.IO]. *)
@@ -43,6 +21,49 @@ module type IO = sig
   (** [return a] creates a value of type ['a t] that is already determined. *)
 end
 
+(** The [Rd] module is the means by which handlers access and manipulate
+    request-specific information. *)
+module Rd : sig
+  type 'body t =
+    { version       : Code.version
+    ; meth          : Code.meth
+    ; uri           : Uri.t
+    ; req_headers   : Header.t
+    ; req_body      : 'body
+    ; resp_headers  : Header.t
+    ; resp_body     : 'body
+    ; dispatch_path : string
+    ; path_info     : (string * string) list
+    } constraint 'body = [> `Empty]
+
+  val make : ?dispatch_path:string -> ?path_info:(string * string) list
+    -> ?resp_headers:Header.t -> ?resp_body:'a
+    -> ?req_body:'a -> request:Request.t
+    -> unit -> 'a t
+  (** [make ~request ()] returns a ['body t] with the following fields
+      pouplated from the [request] argument:
+      {ul
+      {- [uri]};
+      {- [version]};
+      {- [meth]}; and
+      {- [req_headers]}}.
+
+      All other fields will be populated with default values unless they are
+      provided as optional arguments *)
+
+  val with_req_headers  : (Header.t -> Header.t) -> 'a t -> 'a t
+  (** [with_req_headers f t] is equivalent to [{ t with req_headers = f (t.req_headers) }] *)
+
+  val with_resp_headers : (Header.t -> Header.t) -> 'a t -> 'a t
+  (** [with_resp_headers f t] is equivalent to [{ t with resp_headers = f (t.resp_headers) }] *)
+
+  val lookup_path_info      : string -> 'a t -> string option
+  val lookup_path_info_exn  : string -> 'a t -> string
+  (** [lookup_path_info_exn k t] is equivalent [List.assoc k t.path_info],
+      which will throw a [Not_found] exception if the lookup fails. The
+      non-[_exn] version will return an optional result. *)
+end
+
 module type S = sig
   module IO : IO
 
@@ -50,7 +71,7 @@ module type S = sig
     | Ok of 'a
     | Error of int
 
-  type ('a, 'body) op = 'body rd -> ('a result * 'body rd) IO.t
+  type ('a, 'body) op = 'body Rd.t -> ('a result * 'body Rd.t) IO.t
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
