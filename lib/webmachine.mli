@@ -28,8 +28,23 @@ class type ['body] rd = object
   method path_info_exn : string -> string
 end
 
+(** The [IO] module signature abstracts over monadic futures library. It is a
+    much reduced version of the module signature that appears in Cohttp, and as
+    such is compatible with any module that conforms to [Cohttp.S.IO]. *)
+module type IO = sig
+  type +'a t
+  (** The type of a blocking computation *)
+
+  val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
+  (** The monadic bind operator for the type ['a t]. [m >>= f] will pass the
+      result of [m] to [f], once the result is determined. *)
+
+  val return : 'a -> 'a t
+  (** [return a] creates a value of type ['a t] that is already determined. *)
+end
+
 module type S = sig
-  module IO : Cohttp.S.IO
+  module IO : IO
 
   type 'a result =
     | Ok of 'a
@@ -94,5 +109,5 @@ module type S = sig
     (Code.status_code * Header.t * 'body * string list) option IO.t
 end
 
-module Make(IO:Cohttp.S.IO) : S
+module Make(IO:IO) : S
   with module IO = IO

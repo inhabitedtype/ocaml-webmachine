@@ -48,8 +48,15 @@ object(self)
     List.assoc key path_info
 end
 
+module type IO = sig
+  type +'a t
+
+  val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
+  val return : 'a -> 'a t
+end
+
 module type S = sig
-  module IO : Cohttp.S.IO
+  module IO : IO
 
   type 'a result =
     | Ok of 'a
@@ -114,7 +121,7 @@ module type S = sig
     (Code.status_code * Header.t * 'body * string list) option IO.t
 end
 
-module Make(IO:Cohttp.S.IO) = struct
+module Make(IO:IO) = struct
   module IO = IO
   open IO
 
