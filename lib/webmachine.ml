@@ -116,13 +116,13 @@ module type S = sig
     resource:('body resource) -> body:'body -> request:Request.t -> unit ->
     (Code.status_code * Header.t * 'body * string list) IO.t
 
-  val dispatch' :
-    (string * (unit -> 'body resource)) list ->
+  val dispatch :
+    ([`M of string | `L of string] list * bool * (unit -> 'body resource)) list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
 
-  val dispatch :
-    ([`M of string | `L of string] list * bool * (unit -> 'body resource)) list ->
+  val dispatch' :
+    (string * (unit -> 'body resource)) list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
 end

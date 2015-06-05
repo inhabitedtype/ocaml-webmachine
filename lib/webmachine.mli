@@ -76,7 +76,10 @@ module type S = sig
   type 'body acceptor = (bool, 'body) op
 
   val continue : 'a -> ('a, 'body) op
+  (** [continue a rd] is equivalent to [IO.return (Ok x, rd)] *)
+
   val respond : ?body:'body -> int -> ('a, 'body) op
+  (** [respond ?body n rd] is equivalent to [IO.return (Error n, { rd with resp_body = body }] *)
 
   class virtual ['body] resource : object
     constraint 'body = [> `Empty]
@@ -119,16 +122,48 @@ module type S = sig
     ?dispatch_path:string -> ?path_info:(string * string) list ->
     resource:('body resource) -> body:'body -> request:Request.t -> unit ->
     (Code.status_code * Header.t * 'body * string list) IO.t
-
-  val dispatch' :
-    (string * (unit -> 'body resource)) list ->
-    body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option IO.t
+  (** [to_handler ~resource ~body ~request ()] runs the resource through the
+      HTTP decision diagram given [body] and [request]. The result is a tuple
+      that contains the status code, headers and body of the response. The
+      final element of the tuple is a list of decision diagram node names that
+      is useful for debugging. *)
 
   val dispatch :
     ([`M of string | `L of string] list * bool * (unit -> 'body resource)) list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
+  (** [dispatch routes] returns a request handler that will iterate through
+      [routes] and dispatch the request to the first resources that matches the
+      URI path. The form that the individal route entries takes this the
+      following:
+
+        {[(pattern, exact, resource_constructor]}
+
+      The [pattern] itself is a list of literal ([`L]) or named matches ([`M])
+      that the URI path should satify. For example, a route entry that will be
+      associated with a particular user in the system would look like this:
+
+
+        {[([`L "user"; `M "id"], true, user_resource)]}
+
+      This would match a URI path such as ["/user/10"] but would not match a
+      URI such as ["/usr/10/preferences"], since the [exact] component of the
+      route tuple is [false].
+   *)
+
+  val dispatch' :
+    (string * (unit -> 'body resource)) list ->
+    body:'body -> request:Request.t ->
+    (Code.status_code * Header.t * 'body * string list) option IO.t
+  (** [dispatch' routes ~body ~request] works in the same way as {dispatch'}
+      except the user can specify path patterns using a string shorthand. For
+      example, the following route entry:
+
+        {[("/user/:id/*", user_resource)]}
+
+      translates to:
+
+        {[([`L "user"; `M "id"], false, user_resource)]} *)
 end
 
 module Make(IO:IO) : S
