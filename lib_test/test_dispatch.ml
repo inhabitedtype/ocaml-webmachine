@@ -10,23 +10,13 @@ module Id = struct
   let (>>=) (Id a) f = f a
   let return a = Id a
   let run (Id a) = a
-
-  type ic = unit
-  type oc = unit
-
-  type conn = unit
-
-  let iter f xs =
-    Id (List.iter (fun x -> run (f x)) xs)
-
-  let read_line _ = failwith "NYI"
-  let read _ = failwith "NYI"
-  let read_exactly _ = failwith "NYI"
-  let write _ = failwith "NYI"
-  let flush _ = failwith "NYI"
 end
 
-module Webmachine = Webmachine.Make(Id)
+module Webmachine = struct
+  module Rd = Webmachine.Rd
+  include Webmachine.Make(Id)
+end
+
 open Id
 let run = Id.run
 
@@ -56,7 +46,7 @@ class param_path key = object
 
   method content_types_provided rd =
     Webmachine.continue [
-      ("application/text", Webmachine.continue (`String (rd#path_info_exn key)))
+      ("application/text", Webmachine.(continue (`String (Rd.lookup_path_info_exn key rd))))
     ] rd
 
   method content_types_accepted rd =
@@ -73,7 +63,7 @@ class disp_path = object
 
   method content_types_provided rd =
     Webmachine.continue [
-      ("application/text", Webmachine.continue (`String rd#disp_path))
+      ("application/text", Webmachine.(continue (`String rd.Rd.dispatch_path)))
     ] rd
 
   method content_types_accepted rd =

@@ -6,41 +6,80 @@
 
 open Cohttp
 
-class type ['body] rd = object
-  constraint 'body = [> `Empty]
+(** The [IO] module signature abstracts over monadic futures library. It is a
+    much reduced version of the module signature that appears in Cohttp, and as
+    such is compatible with any module that conforms to [Cohttp.S.IO]. *)
+module type IO = sig
+  type +'a t
+  (** The type of a blocking computation *)
 
-  method meth : Code.meth
-  method version : Code.version
-  method uri : Uri.t
+  val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
+  (** The monadic bind operator for the type ['a t]. [m >>= f] will pass the
+      result of [m] to [f], once the result is determined. *)
 
-  method req_headers : Header.t
-  method req_body : 'body
-  method resp_headers : Header.t
-  method resp_body : 'body
+  val return : 'a -> 'a t
+  (** [return a] creates a value of type ['a t] that is already determined. *)
+end
 
-  method set_req_body : 'body -> 'body rd
-  method set_req_headers : Header.t -> 'body rd
-  method set_resp_body : 'body -> 'body rd
-  method set_resp_headers : Header.t -> 'body rd
+(** The [Rd] module is the means by which handlers access and manipulate
+    request-specific information. *)
+module Rd : sig
+  type 'body t =
+    { version       : Code.version
+    ; meth          : Code.meth
+    ; uri           : Uri.t
+    ; req_headers   : Header.t
+    ; req_body      : 'body
+    ; resp_headers  : Header.t
+    ; resp_body     : 'body
+    ; dispatch_path : string
+    ; path_info     : (string * string) list
+    } constraint 'body = [> `Empty]
 
-  method disp_path : string
-  method path_info : string -> string option
-  method path_info_exn : string -> string
+  val make : ?dispatch_path:string -> ?path_info:(string * string) list
+    -> ?resp_headers:Header.t -> ?resp_body:'a
+    -> ?req_body:'a -> request:Request.t
+    -> unit -> 'a t
+  (** [make ~request ()] returns a ['body t] with the following fields
+      pouplated from the [request] argument:
+      {ul
+      {- [uri]};
+      {- [version]};
+      {- [meth]}; and
+      {- [req_headers]}}.
+
+      All other fields will be populated with default values unless they are
+      provided as optional arguments *)
+
+  val with_req_headers  : (Header.t -> Header.t) -> 'a t -> 'a t
+  (** [with_req_headers f t] is equivalent to [{ t with req_headers = f (t.req_headers) }] *)
+
+  val with_resp_headers : (Header.t -> Header.t) -> 'a t -> 'a t
+  (** [with_resp_headers f t] is equivalent to [{ t with resp_headers = f (t.resp_headers) }] *)
+
+  val lookup_path_info      : string -> 'a t -> string option
+  val lookup_path_info_exn  : string -> 'a t -> string
+  (** [lookup_path_info_exn k t] is equivalent [List.assoc k t.path_info],
+      which will throw a [Not_found] exception if the lookup fails. The
+      non-[_exn] version will return an optional result. *)
 end
 
 module type S = sig
-  module IO : Cohttp.S.IO
+  module IO : IO
 
   type 'a result =
     | Ok of 'a
     | Error of int
 
-  type ('a, 'body) op = 'body rd -> ('a result * 'body rd) IO.t
+  type ('a, 'body) op = 'body Rd.t -> ('a result * 'body Rd.t) IO.t
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
   val continue : 'a -> ('a, 'body) op
+  (** [continue a rd] is equivalent to [IO.return (Ok x, rd)] *)
+
   val respond : ?body:'body -> int -> ('a, 'body) op
+  (** [respond ?body n rd] is equivalent to [IO.return (Error n, { rd with resp_body = body }] *)
 
   class virtual ['body] resource : object
     constraint 'body = [> `Empty]
@@ -80,19 +119,52 @@ module type S = sig
   end
 
   val to_handler :
-    resource:('body resource) -> body:'body -> request:Request.t ->
+    ?dispatch_path:string -> ?path_info:(string * string) list ->
+    resource:('body resource) -> body:'body -> request:Request.t -> unit ->
     (Code.status_code * Header.t * 'body * string list) IO.t
-
-  val dispatch' :
-    (string * (unit -> 'body resource)) list ->
-    body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option IO.t
+  (** [to_handler ~resource ~body ~request ()] runs the resource through the
+      HTTP decision diagram given [body] and [request]. The result is a tuple
+      that contains the status code, headers and body of the response. The
+      final element of the tuple is a list of decision diagram node names that
+      is useful for debugging. *)
 
   val dispatch :
     ([`M of string | `L of string] list * bool * (unit -> 'body resource)) list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
+  (** [dispatch routes] returns a request handler that will iterate through
+      [routes] and dispatch the request to the first resources that matches the
+      URI path. The form that the individal route entries takes this the
+      following:
+
+        {[(pattern, exact, resource_constructor]}
+
+      The [pattern] itself is a list of literal ([`L]) or named matches ([`M])
+      that the URI path should satify. For example, a route entry that will be
+      associated with a particular user in the system would look like this:
+
+
+        {[([`L "user"; `M "id"], true, user_resource)]}
+
+      This would match a URI path such as ["/user/10"] but would not match a
+      URI such as ["/usr/10/preferences"], since the [exact] component of the
+      route tuple is [false].
+   *)
+
+  val dispatch' :
+    (string * (unit -> 'body resource)) list ->
+    body:'body -> request:Request.t ->
+    (Code.status_code * Header.t * 'body * string list) option IO.t
+  (** [dispatch' routes ~body ~request] works in the same way as {dispatch'}
+      except the user can specify path patterns using a string shorthand. For
+      example, the following route entry:
+
+        {[("/user/:id/*", user_resource)]}
+
+      translates to:
+
+        {[([`L "user"; `M "id"], false, user_resource)]} *)
 end
 
-module Make(IO:Cohttp.S.IO) : S
+module Make(IO:IO) : S
   with module IO = IO
