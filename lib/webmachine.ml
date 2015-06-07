@@ -226,13 +226,11 @@ module Make(IO:IO) = struct
   class ['body] logic ~(resource:'body resource) ?(dispatch_path="") ?(path_info=[]) ~request ?(body=`Empty) () = object(self)
     constraint 'body = [> `Empty]
 
-    val resource = resource
     val mutable path = ([] : string list)
     val mutable rd = Rd.make ~req_body:body ~dispatch_path ~path_info ~request ()
     val mutable content_type = None
     val mutable charset = None
     val mutable encoding = None
-    val mutable response_body = `Empty
 
     method private encode_body =
       let cf =
