@@ -148,7 +148,7 @@ module type S = sig
 
       This would match a URI path such as ["/user/10"] but would not match a
       URI such as ["/usr/10/preferences"], since the [exact] component of the
-      route tuple is [false].
+      route tuple is [true].
    *)
 
   val dispatch' :
