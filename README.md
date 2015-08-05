@@ -55,4 +55,4 @@ This will be better-documented in the future.
 
 ## License
 
-Proprietary and confidential.
+BSD3, see LICENSE file for its text.
