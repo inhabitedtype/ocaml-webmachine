@@ -549,9 +549,10 @@ module Make(IO:IO) = struct
         | None            -> assert false
         | Some (type_, _) -> type_
       in
-      let value = match charset with
-      | None             -> type_
-      | Some (charset,_) -> Printf.sprintf "%s; charset=%s" type_ charset
+      let value =
+        match charset with
+        | None             -> type_
+        | Some (charset,_) -> Printf.sprintf "%s; charset=%s" type_ charset
       in
       self#set_response_header "Content-Type" value;
       match self#get_request_header "accept-encoding" with
