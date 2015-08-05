@@ -1,32 +1,36 @@
 # ocaml-webmachine
 
-ocaml-webmachine is a layer on top of cohttp library that implements the state
-machines described in [RFC 7231 - Semantics and Content][7231], [RFC 7232 -
-Conditional Requests][7232], [RFC 7234 - Cachcing][7234], and [RFC 7235 -
-Authentication][7235]. This is inspired by Basho's [webmachine][] project.
+ocaml-webmachine is a layer on top of [cohttp][] that implements a
+state-machine-based HTTP request processor. It's particularly well-suited for
+writing RESTful APIs. As the name suggests, this is an OCaml port of the
+[webmachine][] project.
+
+[cohttp]: https://github.com/mirage/ocaml-webmachine
+[webmachine]: https://github.com/webmachine/webmachine
 
 [![Build Status](https://magnum.travis-ci.com/inhabitedtype/ocaml-webmachine.svg?token=XSg14w1MrphqpyipUNfk&branch=master)](https://magnum.travis-ci.com/inhabitedtype/ocaml-webmachine)
 
-[7231]: http://tools.ietf.org/html/rfc7231
-[7232]: http://tools.ietf.org/html/rfc7232
-[7234]: http://tools.ietf.org/html/rfc7234
-[7235]: http://tools.ietf.org/html/rfc7235
-
-[webmachine]: https://github.com/basho/webmachine
-
 ## Installation
 
-Install the core library and its dependencies by pinning:
+Install the library and its depenencies via [OPAM][opam]:
+
+```bash
+opam install webmachine
+```
+
+## Development
+
+To install development versions of the library, pin the package:
 
 ```bash
 opam pin add webmachine
 ```
 
-During development, you can install the latest changes by commiting them to the
-local git repository and running:
+You can install the latest changes by commiting them to the local git
+repository and running:
 
 ```bash
-opam upgrade
+opam upgrade webmachine
 ```
 
 For building and running the tests during development, you will need to install
@@ -47,8 +51,8 @@ at each node in the diagram by defining the appropriate method in a `resource`
 subclass. The correspondence is suggested by the name of the method for now.
 This will be better-documented in the future.
 
-[diagram]: https://raw.githubusercontent.com/basho/webmachine/develop/docs/http-headers-status-v3.png
+[diagram]: https://raw.githubusercontent.com/webmachine/webmachine/develop/docs/http-headers-status-v3.png
 
 ## License
 
-Proprietary and confidential.
+BSD3, see LICENSE file for its text.
