@@ -882,21 +882,24 @@ ok_o18b() ->
     ExpectedDecisionTrace = ?PATH_TO_O18_NO_ACPTHEAD,
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
+*)
 
-%% 300 result via O18
-multiple_choices_o18() ->
-    put_setting(allowed_methods, ['GET']),
-    put_setting(multiple_choices, true),
-    Charsets = [{"utf-8", fun identity/1},
-                {"iso-8859-5", fun identity/1},
-                {"unicode-1-1", fun identity/1}],
-    put_setting(charsets_provided, Charsets),
-    {ok, Result} = httpc:request(get, {url("foo"), []}, [], []),
-    ?assertMatch({{"HTTP/1.1", 300, "Multiple Choices"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_O18_NO_ACPTHEAD,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
+let multiple_choices_o18 () =
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods [`GET];
+    resource#set_multiple_choices true;
+    resource#set_charsets_provided [
+      ("utf-8"      , fun x -> x);
+      ("iso-8859-5" , fun x -> x);
+      ("unicode-1-1", fun x -> x);
+    ];
+    Request.make ~meth:`GET Uri.(of_string "/foo");
+  end in
+  assert_path ~msg:"300 via o18" result Path.to_o18_no_acpthead;
+  assert_status ~msg:"300 via o18" result 300;
+;;
 
+(*
 %% 301 result via I4
 moved_permanently_i4() ->
     put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
@@ -1422,6 +1425,7 @@ let _ =
     "options_b3" >:: options_b3;
     "variances_o18" >:: variances_o18;
     "variances_o18_2" >:: variances_o18_2;
+    "multiple_choices_o18" >:: multiple_choices_o18;
   ] in
   let suite = (Printf.sprintf "test logic") >::: tests in
   let verbose = ref false in

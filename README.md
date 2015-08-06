@@ -8,11 +8,13 @@ writing RESTful APIs. As the name suggests, this is an OCaml port of the
 [cohttp]: https://github.com/mirage/ocaml-webmachine
 [webmachine]: https://github.com/webmachine/webmachine
 
-[![Build Status](https://magnum.travis-ci.com/inhabitedtype/ocaml-webmachine.svg?token=XSg14w1MrphqpyipUNfk&branch=master)](https://magnum.travis-ci.com/inhabitedtype/ocaml-webmachine)
+[![Build Status](https://travis-ci.org/inhabitedtype/ocaml-webmachine.svg?branch=master)](https://travis-ci.org/inhabitedtype/ocaml-webmachine)
 
 ## Installation
 
 Install the library and its depenencies via [OPAM][opam]:
+
+[opam]: http://opam.ocaml.org/
 
 ```bash
 opam install webmachine
