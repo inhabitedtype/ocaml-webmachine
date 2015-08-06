@@ -14,6 +14,8 @@ writing RESTful APIs. As the name suggests, this is an OCaml port of the
 
 Install the library and its depenencies via [OPAM][opam]:
 
+[opam]: http://opam.ocaml.org/
+
 ```bash
 opam install webmachine
 ```
