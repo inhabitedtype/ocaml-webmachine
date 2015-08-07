@@ -53,6 +53,16 @@ at each node in the diagram by defining the appropriate method in a `resource`
 subclass. The correspondence is suggested by the name of the method for now.
 This will be better-documented in the future.
 
+### Examples
+
+To build the examples in the `examples/` subdirectory, reconfigure the build
+process and recompile:
+
+```bash
+./configure --enable-examples
+make clean && make
+```
+
 [diagram]: https://raw.githubusercontent.com/webmachine/webmachine/develop/docs/http-headers-status-v3.png
 
 ## License

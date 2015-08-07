@@ -15,6 +15,10 @@ Plugins:     META (0.4), DevFiles (0.4)
 BuildTools:  ocamlbuild
 OCamlVersion: >= 4.01
 
+Flag examples
+  Description: Build the example programs
+  Default: false
+
 Library webmachine
   Path:             lib
   InternalModules:  Wm_util
@@ -28,6 +32,14 @@ Document webmachine
   Install:              true
   XOCamlBuildPath:      lib
   XOCamlBuildLibraries: webmachine
+
+Executable hello_async
+  Path:             examples
+  MainIs:           hello_async.ml
+  Build$:           flag(examples)
+  CompiledObject:   best
+  Install:          false
+  BuildDepends:     async, cohttp, cohttp.async, threads, webmachine
 
 Executable test_logic
   Path:             lib_test
@@ -54,7 +66,6 @@ Test test_dispatch
   Run$:             flag(tests)
   Command:          $test_dispatch
   WorkingDirectory: lib_test
-
 
 SourceRepository master
   Type:     git
