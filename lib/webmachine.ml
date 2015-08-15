@@ -288,11 +288,11 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
   let (>>~) m f = m f
 
-  class ['body] logic ~(resource:'body resource) ?(dispatch_path="") ?(path_info=[]) ~request ?(body=`Empty) () = object(self)
+  class ['body] logic ~(resource:'body resource) ~(rd:'body Rd.t) ?(body=`Empty) () = object(self)
     constraint 'body = [> `Empty]
 
     val mutable path = ([] : string list)
-    val mutable rd = Rd.make ~req_body:body ~dispatch_path ~path_info ~request ()
+    val mutable rd = rd
     val mutable content_type = None
     val mutable charset = None
     val mutable encoding = None
@@ -952,7 +952,8 @@ module Make(IO:IO)(Clock:CLOCK) = struct
   end
 
   let to_handler ?dispatch_path ?path_info ~resource ~body ~request () =
-    let logic = new logic ?dispatch_path ?path_info ~resource ~body ~request () in
+    let rd = Rd.make ~req_body:body ?dispatch_path ?path_info ~request () in
+    let logic = new logic ~resource ~rd ~body () in
     logic#run
   ;;
 
