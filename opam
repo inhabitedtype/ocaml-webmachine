@@ -6,6 +6,7 @@ author: "Inhabited Type LLC"
 homepage: "https://github.com/inhabitedtype/ocaml-webmachine"
 dev-repo: "https://github.com/inhabitedtype/ocaml-webmachine.git"
 bug-reports: "https://github.com/inhabitedtype/ocaml-webmachine/issues"
+license: "BSD-3-clause"
 build: [
   ["ocaml" "setup.ml" "-configure" "--prefix" prefix]
   ["ocaml" "setup.ml" "-build"]
