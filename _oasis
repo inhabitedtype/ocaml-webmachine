@@ -41,6 +41,14 @@ Executable hello_async
   Install:          false
   BuildDepends:     async, cohttp, cohttp.async, threads, webmachine
 
+Executable hello_lwt
+  Path:             examples
+  MainIs:           hello_lwt.ml
+  Build$:           flag(examples)
+  CompiledObject:   best
+  Install:          false
+  BuildDepends:     cohttp, cohttp.lwt, threads, webmachine
+
 Executable test_logic
   Path:             lib_test
   MainIs:           test_logic.ml
