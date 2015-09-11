@@ -4,3 +4,4 @@ script: bash -ex .travis-opam.sh
 sudo: required
 env:
   - OCAML_VERSION=4.02 PACKAGE=webmachine
+  - OCAML_VERSION=4.01 PACKAGE=webmachine
