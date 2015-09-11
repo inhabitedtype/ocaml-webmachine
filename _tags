@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 73a54b80d340e0b9ac2747de50e60780)
+# DO NOT EDIT (digest: 514b384301d1c1300674874e5f619b56)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -28,8 +28,16 @@ true: annot, bin_annot
 <examples/hello_async.{native,byte}>: package(threads)
 <examples/hello_async.{native,byte}>: use_webmachine
 <examples/*.ml{,i,y}>: package(async)
-<examples/*.ml{,i,y}>: package(cohttp)
 <examples/*.ml{,i,y}>: package(cohttp.async)
+# Executable hello_lwt
+<examples/hello_lwt.{native,byte}>: package(cohttp)
+<examples/hello_lwt.{native,byte}>: package(cohttp.lwt)
+<examples/hello_lwt.{native,byte}>: package(re)
+<examples/hello_lwt.{native,byte}>: package(re.str)
+<examples/hello_lwt.{native,byte}>: package(threads)
+<examples/hello_lwt.{native,byte}>: use_webmachine
+<examples/*.ml{,i,y}>: package(cohttp)
+<examples/*.ml{,i,y}>: package(cohttp.lwt)
 <examples/*.ml{,i,y}>: package(re)
 <examples/*.ml{,i,y}>: package(re.str)
 <examples/*.ml{,i,y}>: package(threads)
