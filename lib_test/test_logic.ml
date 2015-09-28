@@ -56,6 +56,7 @@ let http_1_1_methods =
 let default_allowed_methods = [`GET; `HEAD; `PUT]
 
 let to_html rd = Webmachine.continue (`String "<html><body>Foo</body></html>") rd
+let of_plain rd = Webmachine.continue true rd
 
 class test_resource = object
   (* A configurable resource for testing. Every method on the resource has a
@@ -743,7 +744,21 @@ precond_fail_j18_via_h12() ->
     ExpectedDecisionTrace = ?PATH_TO_J18_NO_ACPTHEAD_3,
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
+*)
 
+let content_valid () =
+  let headers = Header.of_list [("Content-Type", "text/plain")] in
+  let result = with_test_resource' begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_content_types_accepted [("text/plain", of_plain)];
+    Request.make ~headers ~meth:`PUT Uri.(of_string "new"), `String "foo"
+  end in
+  let msg = "204 result via o20, p11, o14" in
+  assert_path ~msg result Path.to_o20_via_p11_via_o14_no_acpthead;
+  assert_status ~msg result 204
+;;
+
+(*
 %% 204 result, content-md5 header matches
 content_md5_valid_b9a() ->
     put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
@@ -1421,6 +1436,7 @@ let _ =
     "precond_fail_g11" >:: precond_fail_g11;
     (* "precond_fail_h12" >:: precond_fail_h12; *)
     "precond_fail_j18" >:: precond_fail_j18;
+    "content_valid" >:: content_valid;
     "forbidden_b7" >:: forbidden_b7;
     "options_b3" >:: options_b3;
     "variances_o18" >:: variances_o18;
