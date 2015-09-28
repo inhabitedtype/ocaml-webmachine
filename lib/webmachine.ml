@@ -809,9 +809,9 @@ module Make(IO:IO) = struct
 
     method v3o20 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3o20";
-      match body with
-      | `Empty -> self#v3o18
-      | _      -> self#respond ~status:`No_content ()
+      match rd.Rd.resp_body with
+      | `Empty -> self#respond ~status:`No_content ()
+      | _      -> self#v3o18
 
     method v3p3 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3p3";
