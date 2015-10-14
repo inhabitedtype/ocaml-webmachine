@@ -22,10 +22,11 @@ opam install webmachine
 
 ## Development
 
-To install development versions of the library, pin the package:
+To install development versions of the library, pin the package from the root
+of the repository:
 
 ```bash
-opam pin add webmachine
+opam pin add .
 ```
 
 You can install the latest changes by commiting them to the local git
