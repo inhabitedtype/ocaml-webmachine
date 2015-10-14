@@ -156,7 +156,7 @@ module type S = sig
       is useful for debugging. *)
 
   val dispatch :
-    ([`M of string | `L of string] list * bool * (unit -> 'body resource)) list ->
+    (unit -> 'body resource) Dispatch.route list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
   (** [dispatch routes] returns a request handler that will iterate through
@@ -166,20 +166,20 @@ module type S = sig
 
         {[(pattern, exact, resource_constructor]}
 
-      The [pattern] itself is a list of literal ([`L]) or named matches ([`M])
-      that the URI path should satify. For example, a route entry that will be
-      associated with a particular user in the system would look like this:
+      The [pattern] itself is a list of literal ([`Lit]) or variable matches
+      ([`Var]) that the URI path should satify. For example, a route entry that
+      will be associated with a particular user in the system would look like
+      this:
 
-
-        {[([`L "user"; `M "id"], true, user_resource)]}
+        {[([`Lit, "user"; `Var, "id"], `Exact, user_resource)]}
 
       This would match a URI path such as ["/user/10"] but would not match a
       URI such as ["/usr/10/preferences"], since the [exact] component of the
-      route tuple is [true].
+      route tuple is [`Exact].
    *)
 
   val dispatch' :
-    (string * (unit -> 'body resource)) list ->
+    (unit -> 'body resource) Dispatch.DSL.route list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
   (** [dispatch' routes ~body ~request] works in the same way as {dispatch'}
@@ -190,7 +190,7 @@ module type S = sig
 
       translates to:
 
-        {[([`L "user"; `M "id"], false, user_resource)]} *)
+        {[([`Lit, "user"; `Var "id"], `Prefix, user_resource)]} *)
 end
 
 module Make(IO:IO) : S

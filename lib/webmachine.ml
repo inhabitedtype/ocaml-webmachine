@@ -144,12 +144,12 @@ module type S = sig
     (Code.status_code * Header.t * 'body * string list) IO.t
 
   val dispatch :
-    ([`M of string | `L of string] list * bool * (unit -> 'body resource)) list ->
+    (unit -> 'body resource) Dispatch.route list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
 
   val dispatch' :
-    (string * (unit -> 'body resource)) list ->
+    (unit -> 'body resource) Dispatch.DSL.route list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
 end
@@ -835,16 +835,16 @@ module Make(IO:IO) = struct
   let dispatch table =
     fun ~body ~request ->
       let path = Uri.path (Cohttp.Request.uri request) in
-      match Util.Dispatch.select table path with
-      | None -> return None
-      | Some(r, path_info, dispatch_path) ->
-        let resource = r () in
-        to_handler ~dispatch_path ~path_info ~resource ~body ~request ()
+      match Dispatch.dispatch table path with
+      | Result.Error _ -> return None
+      | Result.Ok (mk_resource, path_info, dispatch_path) ->
+        let resource = mk_resource () in
+        to_handler ?dispatch_path ~path_info ~resource ~body ~request ()
         >>= fun x -> return (Some x)
 
   let dispatch' table =
     dispatch (List.map (fun (m, r) ->
-      let m', s = Util.Dispatch.parse_match m in
-      (m', s, r))
+      let p, t = Dispatch.of_dsl m in
+      (p, t, r))
     table)
 end
