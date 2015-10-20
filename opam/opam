@@ -23,13 +23,13 @@ build-test: [
 build-doc: [ "ocaml" "setup.ml" "-doc" ]
 depends: [
   "cohttp" {>= "0.9.11"}
-  "dispatch"
+  "dispatch" {>= "0.2.0"}
   "ocamlfind" {build}
   "ounit" {test & >= "1.0.2"}
   "re" {>= "1.3.0"}
 ]
 depopts: [
-  "async" {build}
-  "base-threads" {build}
+  "async"
+  "base-threads"
 ]
 available: [ ocaml-version >= "4.01" ]
