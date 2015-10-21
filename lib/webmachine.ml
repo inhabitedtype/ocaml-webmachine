@@ -424,9 +424,13 @@ module Make(IO:IO) = struct
       let meth = self#meth in
       self#run_op resource#allowed_methods
       >>~ fun (meths:Code.meth list) ->
-        if List.exists (fun x -> Code.compare_method meth x = 0) meths
-          then self#v3b9
-          else self#halt 405
+        if List.exists (fun x -> Code.compare_method meth x = 0) meths then
+          self#v3b9
+        else begin
+          let allow = String.concat "," (List.map Code.string_of_method meths) in
+          self#set_response_header "allow" allow;
+          self#halt 405
+        end
 
     method v3b9 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3b9";
