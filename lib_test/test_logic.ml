@@ -424,7 +424,6 @@ let with_test_resource' f =
   logic (f resource)
 ;;
 
-
 let assert_status ~msg (status_code, _, _, _) status =
   assert_equal ~msg ~printer:string_of_int
     status Code.(code_of_status status_code)
@@ -433,6 +432,11 @@ let assert_status ~msg (status_code, _, _, _) status =
 let assert_path ~msg (_, _, _, p1) p2 =
   let printer s = Printf.sprintf "[%s]" (String.concat "; " s) in
   assert_equal ~msg ~printer p2 p1
+;;
+
+let assert_header ~msg (_, headers, _, _) header value =
+  let printer = function None -> "<none>" | Some x -> x in
+  assert_equal ~msg ~printer (Header.get headers header) (Some value)
 ;;
 
 (* BEGIN TESTS *)
@@ -555,6 +559,7 @@ let head_method_not_allowed () =
   end in
   assert_path ~msg:"405 from head method not allowed" result Path.to_b10;
   assert_status ~msg:"405 from head method not allowed" result 405;
+  assert_header ~msg:"405 from head method now allowed" result "allow" "GET,POST,PUT";
 ;;
 
 let non_standard_method_501 () =
