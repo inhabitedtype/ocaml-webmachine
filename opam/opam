@@ -1,6 +1,6 @@
 opam-version: "1.2"
 name: "webmachine"
-version: "0.2.0"
+version: "0.2.1"
 maintainer: "Spiros Eliopoulos <spiros@inhabitedytpe.com>"
 authors: [ "Spiros Eliopoulos <spiros@inhabitedytpe.com>" ]
 license: "BSD-3-clause"
