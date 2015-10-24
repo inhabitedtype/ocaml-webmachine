@@ -166,13 +166,18 @@ module Make(IO:IO) = struct
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
+  let (>>=?) m f =
+    m >>= function
+    | Ok x, rd       -> f x rd
+    | Error code, rd -> return (Error code, rd)
+
   let continue x rd = return (Ok x, rd)
 
   let respond ?(body=`Empty) x rd =
     let rd = { rd with Rd.resp_body = body } in
     return (Error x, rd)
 
-  class virtual ['body] resource = object
+  class virtual ['body] resource = object(self)
     constraint 'body = [> `Empty]
 
     method virtual content_types_provided : ((string * ('body provider)) list, 'body) op
@@ -199,7 +204,8 @@ module Make(IO:IO) = struct
     method valid_entity_length (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue true rd
     method options (rd :'body Rd.t) : ((string * string) list result * 'body Rd.t) IO.t =
-      continue [] rd
+      self#allowed_methods rd >>=? fun meths rd ->
+      continue ["allow", String.concat "," (List.map Code.string_of_method meths)] rd
     method allowed_methods (rd :'body Rd.t) : (Code.meth list result * 'body Rd.t) IO.t =
       continue [ `GET; `HEAD ] rd
     method known_methods (rd :'body Rd.t) : (Code.meth list result * 'body Rd.t) IO.t =
