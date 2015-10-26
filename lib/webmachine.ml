@@ -109,7 +109,6 @@ module type S = sig
 
     method resource_exists : (bool, 'body) op
     method service_available : (bool, 'body) op
-    method auth_required : (bool, 'body) op
     method is_authorized : (bool, 'body) op
     method forbidden : (bool, 'body) op
     method malformed_request : (bool, 'body) op
@@ -186,8 +185,6 @@ module Make(IO:IO) = struct
     method resource_exists (rd:'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue true rd
     method service_available (rd:'body Rd.t) : (bool result * 'body Rd.t) IO.t =
-      continue true rd
-    method auth_required (rd:'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue true rd
     method is_authorized (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue true rd
