@@ -845,8 +845,8 @@ module Make(IO:IO) = struct
   let dispatch table =
     let table =
       List.map (fun (p, t, mk_resource) ->
-        let resource = mk_resource () in
         (p, t, fun path_info dispatch_path ~body ~request ->
+          let resource = mk_resource () in
           to_handler ?dispatch_path ~path_info ~resource ~body ~request ()))
       table
     in
