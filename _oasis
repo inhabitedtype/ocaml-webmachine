@@ -1,6 +1,6 @@
 OASISFormat: 0.4
 Name:        webmachine
-Version:     0.2.1
+Version:     0.2.2
 Synopsis:    A REST toolkit for OCaml
 Description: OCaml webmachine is a layer on top of cohttp that implements a
   state-machine-based HTTP request processor. It's particularly well-suited for
