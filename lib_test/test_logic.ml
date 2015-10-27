@@ -61,8 +61,8 @@ let of_plain rd = Webmachine.continue true rd
 class test_resource = object
   (* A configurable resource for testing. Every method on the resource has a
    * result that's determined by an internal variable that you can set. For
-   * example, to set the value that [r#auth_required] will return, simply call
-   * [r#set_auth_required false].
+   * example, to set the value that [r#is_authorized] will return, simply call
+   * [r#set_is_authorized false].
    *)
 
   inherit [Cohttp.Body.t] Webmachine.resource
@@ -82,7 +82,6 @@ class test_resource = object
 
   val _resource_exits = ref true
   val _service_available = ref true
-  val _auth_required = ref true
   val _is_authorized = ref true
   val _forbidden = ref false
   val _malformed_request = ref false
@@ -114,8 +113,6 @@ class test_resource = object
     Webmachine.continue !_resource_exits rd
   method service_available rd =
     Webmachine.continue !_service_available rd
-  method auth_required rd =
-    Webmachine.continue !_auth_required rd
   method is_authorized rd =
     Webmachine.continue !_is_authorized rd
   method forbidden rd =
@@ -173,8 +170,6 @@ class test_resource = object
     _resource_exits := v
   method set_service_available v =
     _service_available := v
-  method set_auth_required v =
-    _auth_required := v
   method set_is_authorized v =
     _is_authorized := v
   method set_forbidden v =

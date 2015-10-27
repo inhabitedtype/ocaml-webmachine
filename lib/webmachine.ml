@@ -109,7 +109,6 @@ module type S = sig
 
     method resource_exists : (bool, 'body) op
     method service_available : (bool, 'body) op
-    method auth_required : (bool, 'body) op
     method is_authorized : (bool, 'body) op
     method forbidden : (bool, 'body) op
     method malformed_request : (bool, 'body) op
@@ -186,8 +185,6 @@ module Make(IO:IO) = struct
     method resource_exists (rd:'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue true rd
     method service_available (rd:'body Rd.t) : (bool result * 'body Rd.t) IO.t =
-      continue true rd
-    method auth_required (rd:'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue true rd
     method is_authorized (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue true rd
@@ -687,7 +684,7 @@ module Make(IO:IO) = struct
       >>~ function
         | None     -> self#v3l5
         | Some uri ->
-          self#set_response_header "Location" (Uri.to_string uri);
+          self#set_response_header "location" (Uri.to_string uri);
           self#respond ~status:`Moved_permanently ()
 
     method v3k13 : (Code.status_code * Header.t * 'body) IO.t =
@@ -709,7 +706,7 @@ module Make(IO:IO) = struct
       >>~ function
         | None     -> self#halt 410
         | Some uri ->
-          self#set_response_header "Location" (Uri.to_string uri);
+          self#set_response_header "location" (Uri.to_string uri);
           self#respond ~status:`Temporary_redirect ()
 
     method v3l7 : (Code.status_code * Header.t * 'body) IO.t =
