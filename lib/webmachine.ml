@@ -684,7 +684,7 @@ module Make(IO:IO) = struct
       >>~ function
         | None     -> self#v3l5
         | Some uri ->
-          self#set_response_header "Location" (Uri.to_string uri);
+          self#set_response_header "location" (Uri.to_string uri);
           self#respond ~status:`Moved_permanently ()
 
     method v3k13 : (Code.status_code * Header.t * 'body) IO.t =
@@ -706,7 +706,7 @@ module Make(IO:IO) = struct
       >>~ function
         | None     -> self#halt 410
         | Some uri ->
-          self#set_response_header "Location" (Uri.to_string uri);
+          self#set_response_header "location" (Uri.to_string uri);
           self#respond ~status:`Temporary_redirect ()
 
     method v3l7 : (Code.status_code * Header.t * 'body) IO.t =
