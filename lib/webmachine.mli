@@ -31,6 +31,15 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
+(** A REST toolkit for OCaml.
+
+    Webmachine is a port of the Erlang project of the
+    {{:http://webmachine.github.io/}same name}, designed to work as a
+    REST-aware layer on top of {{:https://github.com/mirage/ocaml-cohttp} cohttp}.
+
+    To use this module, apply the {{!Make}[Make]} functor to an {{!IO}[IO]}
+    module, and subclass the {{!classtype:S.resource}resouce} virtual class. *)
+
 open Cohttp
 
 (** The [IO] module signature abstracts over monadic futures library. It is a
