@@ -116,7 +116,7 @@ module type S = sig
 
     method resource_exists : (bool, 'body) op
     method service_available : (bool, 'body) op
-    method is_authorized : (bool, 'body) op
+    method is_authorized : ([`Yes | `No of string], 'body) op
     method forbidden : (bool, 'body) op
     method malformed_request : (bool, 'body) op
     method uri_too_long : (bool, 'body) op
