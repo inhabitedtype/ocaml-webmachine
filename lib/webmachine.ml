@@ -109,7 +109,7 @@ module type S = sig
 
     method resource_exists : (bool, 'body) op
     method service_available : (bool, 'body) op
-    method is_authorized : (bool, 'body) op
+    method is_authorized : ([`Yes | `No of string], 'body) op
     method forbidden : (bool, 'body) op
     method malformed_request : (bool, 'body) op
     method uri_too_long : (bool, 'body) op
@@ -186,8 +186,8 @@ module Make(IO:IO) = struct
       continue true rd
     method service_available (rd:'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue true rd
-    method is_authorized (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
-      continue true rd
+    method is_authorized (rd :'body Rd.t) : ([`Yes | `No of string] result * 'body Rd.t) IO.t =
+      continue `Yes rd
     method forbidden (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue false rd
     method malformed_request (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
@@ -446,8 +446,10 @@ module Make(IO:IO) = struct
       self#d "v3b8";
       self#run_op resource#is_authorized
       >>~ function
-        | true   -> self#v3b7
-        | false  -> self#halt 401
+        | `Yes      -> self#v3b7
+        | `No realm ->
+          self#set_response_header "www-authenticate" realm;
+          self#halt 401
 
     method v3b7 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3b7";
