@@ -93,13 +93,13 @@ module Rd = struct
 end
 
 module type S = sig
-  module IO : IO
+  type +'a io
 
   type 'a result =
     | Ok of 'a
     | Error of int
 
-  type ('a, 'body) op = 'body Rd.t -> ('a result * 'body Rd.t) IO.t
+  type ('a, 'body) op = 'body Rd.t -> ('a result * 'body Rd.t) io
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
@@ -145,28 +145,29 @@ module type S = sig
   val to_handler :
     ?dispatch_path:string -> ?path_info:(string * string) list ->
     resource:('body resource) -> body:'body -> request:Request.t -> unit ->
-    (Code.status_code * Header.t * 'body * string list) IO.t
+    (Code.status_code * Header.t * 'body * string list) io
 
   val dispatch :
     (unit -> 'body resource) Dispatch.route list ->
     body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option IO.t
+    (Code.status_code * Header.t * 'body * string list) option io
 
   val dispatch' :
     (unit -> 'body resource) Dispatch.DSL.route list ->
     body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option IO.t
+    (Code.status_code * Header.t * 'body * string list) option io
 end
 
 module Make(IO:IO) = struct
-  module IO = IO
+  type +'a io = 'a IO.t
+
   open IO
 
   type 'a result =
     | Ok of 'a
     | Error of int
 
-  type ('a, 'body) op = 'body Rd.t -> ('a result * 'body Rd.t) IO.t
+  type ('a, 'body) op = 'body Rd.t -> ('a result * 'body Rd.t) io
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
