@@ -59,12 +59,13 @@ module Rd : sig
     ; req_body      : 'body
     ; resp_headers  : Header.t
     ; resp_body     : 'body
+    ; resp_redirect : bool
     ; dispatch_path : string
     ; path_info     : (string * string) list
     } constraint 'body = [> `Empty]
 
   val make : ?dispatch_path:string -> ?path_info:(string * string) list
-    -> ?resp_headers:Header.t -> ?resp_body:'a
+    -> ?resp_headers:Header.t -> ?resp_body:'a -> ?resp_redirect:bool
     -> ?req_body:'a -> request:Request.t
     -> unit -> 'a t
   (** [make ~request ()] returns a ['body t] with the following fields
@@ -89,6 +90,10 @@ module Rd : sig
   (** [lookup_path_info_exn k t] is equivalent [List.assoc k t.path_info],
       which will throw a [Not_found] exception if the lookup fails. The
       non-[_exn] version will return an optional result. *)
+
+  val redirect : string -> 'a t -> 'a t
+  (** [redirect location t] sets the [resp_redirect] bit in [t] and sets the
+      [Location] response header to [location]. *)
 end
 
 module type S = sig
