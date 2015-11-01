@@ -57,6 +57,10 @@ let default_allowed_methods = [`GET; `HEAD; `PUT]
 
 let to_html rd = Webmachine.continue (`String "<html><body>Foo</body></html>") rd
 let of_plain rd = Webmachine.continue true rd
+let of_plain_with_loc loc rd =
+  Webmachine.continue true Webmachine.Rd.(with_resp_headers (fun header ->
+    Header.add header "location" loc) rd)
+
 
 class test_resource = object
   (* A configurable resource for testing. Every method on the resource has a
@@ -1123,21 +1127,23 @@ created_p11_post() ->
     ExpectedDecisionTrace = ?PATH_TO_P11_VIA_N11_NO_ACPTHEAD,
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
+*)
 
-%% 201 result via P11 from PUT
-created_p11_put() ->
-    put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
-    put_setting(resource_exists, false),
-    ContentType = "text/html",
-    put_setting(content_types_accepted, [{ContentType, to_html}]),
-    put_setting(is_conflict, {new_location, url("new")}),
-    PutRequest = {url("put"), [], ContentType, "foo"},
-    {ok, Result} = httpc:request(put, PutRequest, [], []),
-    ?assertMatch({{"HTTP/1.1", 201, "Created"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_P11_VIA_P3_NO_ACPTHEAD,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
+let create_p11_put () =
+  let headers = Header.init_with "Content-Type" "text/plain" in
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_resource_exists false;
+    resource#set_content_types_accepted [
+      "text/plain", of_plain_with_loc "new"
+    ];
+    resource#set_is_conflict false;
+    Request.make ~headers ~meth:`PUT Uri.(of_string "/put")
+  end in
+  assert_path ~msg:"201 via P11" result Path.to_p11_via_p3_no_acpthead;
+  assert_status ~msg:"201 via P11" result 201
 
+(*
 %% 409 result via P3 (must be a PUT)
 conflict_p3() ->
     put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
@@ -1442,6 +1448,7 @@ let _ =
     "variances_o18" >:: variances_o18;
     "variances_o18_2" >:: variances_o18_2;
     "multiple_choices_o18" >:: multiple_choices_o18;
+    "create_p11_put" >:: create_p11_put
   ] in
   let suite = (Printf.sprintf "test logic") >::: tests in
   let verbose = ref false in
