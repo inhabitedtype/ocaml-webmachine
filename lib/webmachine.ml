@@ -51,6 +51,7 @@ module Rd = struct
     ; req_body      : 'body
     ; resp_headers  : Header.t
     ; resp_body     : 'body
+    ; resp_redirect : bool
     ; dispatch_path : string
     ; path_info     : (string * string) list
     } constraint 'body = [> `Empty]
@@ -58,10 +59,8 @@ module Rd = struct
   let make
       ?(dispatch_path="")
       ?(path_info=[])
-      ?(resp_headers=Header.init ())
-      ?(resp_body=`Empty)
-      ?(req_body=`Empty)
-      ~request ()
+      ?(resp_headers=Header.init ()) ?(resp_body=`Empty) ?(resp_redirect=false)
+      ?(req_body=`Empty) ~request ()
     =
     { uri     = request.Request.uri
     ; version = request.Request.version
@@ -70,6 +69,7 @@ module Rd = struct
     ; resp_headers
     ; req_body
     ; resp_body
+    ; resp_redirect
     ; dispatch_path
     ; path_info
     }
@@ -85,6 +85,11 @@ module Rd = struct
 
   let lookup_path_info key t =
     try Some(lookup_path_info_exn key t) with Not_found -> None
+
+  let redirect location t =
+    with_resp_headers (fun header ->
+      Header.add header "location" location)
+    { t with resp_redirect = true }
 end
 
 module type S = sig
@@ -287,6 +292,9 @@ module Make(IO:IO) = struct
 
     method private get_response_header k =
       Header.get rd.Rd.resp_headers k
+
+    method private is_redirect =
+      rd.Rd.resp_redirect
 
     method private respond ~status ?body () : (Code.status_code * Header.t * 'body) IO.t =
       let body =
@@ -759,9 +767,12 @@ module Make(IO:IO) = struct
       >>~ fun executed ->
         if executed then begin
           self#encode_body;
-          match self#get_response_header "location" with
-          | None   -> self#v3p11
-          | Some _ -> self#respond ~status:`See_other ()
+          if self#is_redirect then
+            match self#get_response_header "location" with
+            | None   -> self#halt 500
+            | Some _ -> self#respond ~status:`See_other ()
+          else
+            self#v3p11
         end else
           self#halt 500
 
