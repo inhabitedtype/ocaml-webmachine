@@ -178,8 +178,12 @@ module Make(IO:IO) = struct
 
   let continue x rd = return (Ok x, rd)
 
-  let respond ?(body=`Empty) x rd =
-    let rd = { rd with Rd.resp_body = body } in
+  let respond ?body x rd =
+    let rd =
+      match body with
+      | None           -> rd
+      | Some resp_body -> { rd with Rd.resp_body }
+    in
     return (Error x, rd)
 
   class virtual ['body] resource = object(self)
@@ -308,7 +312,7 @@ module Make(IO:IO) = struct
 
     method private halt code : (Code.status_code * Header.t * 'body) IO.t =
       let status = Code.status_of_code code in
-      self#respond ~status ~body:`Empty ()
+      self#respond ~status ()
 
     method private choose_charset acceptable k =
       let open Accept in
