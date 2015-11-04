@@ -97,13 +97,13 @@ module Rd : sig
 end
 
 module type S = sig
-  module IO : IO
+  type +'a io
 
   type 'a result =
     | Ok of 'a
     | Error of int
 
-  type ('a, 'body) op = 'body Rd.t -> ('a result * 'body Rd.t) IO.t
+  type ('a, 'body) op = 'body Rd.t -> ('a result * 'body Rd.t) io
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
@@ -152,7 +152,7 @@ module type S = sig
   val to_handler :
     ?dispatch_path:string -> ?path_info:(string * string) list ->
     resource:('body resource) -> body:'body -> request:Request.t -> unit ->
-    (Code.status_code * Header.t * 'body * string list) IO.t
+    (Code.status_code * Header.t * 'body * string list) io
   (** [to_handler ~resource ~body ~request ()] runs the resource through the
       HTTP decision diagram given [body] and [request]. The result is a tuple
       that contains the status code, headers and body of the response. The
@@ -162,7 +162,7 @@ module type S = sig
   val dispatch :
     (unit -> 'body resource) Dispatch.route list ->
     body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option IO.t
+    (Code.status_code * Header.t * 'body * string list) option io
   (** [dispatch routes] returns a request handler that will iterate through
       [routes] and dispatch the request to the first resources that matches the
       URI path. The form that the individal route entries takes this the
@@ -185,7 +185,7 @@ module type S = sig
   val dispatch' :
     (unit -> 'body resource) Dispatch.DSL.route list ->
     body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option IO.t
+    (Code.status_code * Header.t * 'body * string list) option io
   (** [dispatch' routes ~body ~request] works in the same way as {dispatch'}
       except the user can specify path patterns using a string shorthand. For
       example, the following route entry:
@@ -198,4 +198,4 @@ module type S = sig
 end
 
 module Make(IO:IO) : S
-  with module IO = IO
+  with type +'a io = 'a IO.t
