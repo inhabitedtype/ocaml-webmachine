@@ -42,12 +42,12 @@ module Db = struct
   let get db id =
     Lwt_mvar.take db >>= (fun l ->
         let _ = Lwt_mvar.put db l in
-        let e = 
+        let e =
           if (List.mem_assoc id l) then
             [(id, List.assoc id l)]
           else
             []
-        in        
+        in
         Lwt.return e
       )
 
@@ -61,7 +61,7 @@ module Db = struct
   let add db e =
     Lwt_mvar.take db >>= (fun l ->
         let l = List.fast_sort (fun (id1, _) (id2, _) -> compare id2 id1) l in
-        let id = 
+        let id =
           match l with
           | [] -> 1
           | (max, _) :: _ ->max + 1
@@ -73,7 +73,7 @@ module Db = struct
 
   let put db id e =
     Lwt_mvar.take db >>= (fun l ->
-        let id = 
+        let id =
           if (List.mem_assoc id l) then
             let l = List.remove_assoc id l in
             let l = (id, e) :: l in
@@ -88,7 +88,7 @@ module Db = struct
 
   let delete db id =
     Lwt_mvar.take db >>= (fun l ->
-        let id = 
+        let id =
           if (List.mem_assoc id l) then
             let l = List.remove_assoc id l in
             let _ = Lwt_mvar.put db l in
@@ -104,15 +104,15 @@ end
 
 (* Log to stderr *)
 module Log = struct
-  let method_called s = 
+  let method_called s =
     Printf.eprintf "Method called: %s\n" s ;
     flush_all ()
 
-  let info s = 
+  let info s =
     Printf.eprintf "%s\n" s ;
     flush_all ()
 
-  let error s = 
+  let error s =
     Printf.eprintf "Error: %s\n" s ;
     flush_all ()
 end
@@ -136,7 +136,7 @@ class item db = object(self)
 
   method private get_db = db
 
-  (* GET: retrieve an item or a list of items 
+  (* GET: retrieve an item or a list of items
    * POST: create a new item
    * PUT: modify an item
    * DELETE: delete an item *)
@@ -175,7 +175,7 @@ class item db = object(self)
   (* Get the id parameter from the url *)
   method private id rd =
     Log.method_called "id" ;
-    try 
+    try
       let s = Wm.Rd.lookup_path_info_exn "id" rd in
       int_of_string s
     with
@@ -187,20 +187,20 @@ class item db = object(self)
     self#modify_item rd >>= Wm.continue true
 
   (* Create a new item *)
-  method private create_item rd = 
+  method private create_item rd =
     Log.method_called "create_item" ;
     (* get the request body (should contains JSON) *)
     Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= (
-      fun v -> 
+      fun v ->
         Log.info (Printf.sprintf "Body content: %s" v) ;
         (* create a new item *)
         Db.add self#get_db v >>= (
           fun new_id ->
             (* return JSON data *)
             let json = Printf.sprintf "{\"id\":%d}" new_id in
-            (* return also the location of this new item *)             
+            (* return also the location of this new item *)
             let h = rd.Wm.Rd.resp_headers in
-            let h = Cohttp.Header.add_unless_exists h "location" 
+            let h = Cohttp.Header.add_unless_exists h "location"
                 ("/items/" ^ (string_of_int new_id))
             in
             Lwt.return { rd with Wm.Rd.resp_body = `String json;
@@ -209,11 +209,11 @@ class item db = object(self)
     )
 
   (* Modify an item *)
-  method private modify_item rd = 
+  method private modify_item rd =
     Log.method_called "modify_item" ;
     (* get the request body (should contains JSON) *)
     Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= (
-      fun v -> 
+      fun v ->
         Log.info (Printf.sprintf "Body content: %s" v) ;
         (* get the item id from the url *)
         let id = self#id rd in
@@ -222,7 +222,7 @@ class item db = object(self)
         Db.put self#get_db id v >>= (
           fun id ->
             (* return JSON data *)
-            let json = 
+            let json =
               if id = 0 then
                 "{\"status\":\"not found\"}"
               else
@@ -233,7 +233,7 @@ class item db = object(self)
     )
 
   (* Delete an item *)
-  method private delete_item rd = 
+  method private delete_item rd =
     Log.method_called "delete_item" ;
     (* get the item id from the url *)
     let id = self#id rd in
@@ -242,7 +242,7 @@ class item db = object(self)
     Db.delete self#get_db id >>= (
       fun id ->
         (* return JSON data *)
-        let json = 
+        let json =
           if id = 0 then
             "{\"status\":\"not found\"}"
           else
@@ -256,13 +256,13 @@ class item db = object(self)
     Log.method_called "retrieve_item" ;
     (* if there is no id, get all the items *)
     let id = self#id rd in
-    let items = 
+    let items =
       if (id = 0) then
         Db.get_all self#get_db
       else
         Db.get self#get_db id
     in
-    let build_list acc (_, e) = 
+    let build_list acc (_, e) =
       e :: acc
     in
     items >>= (fun items ->
@@ -270,7 +270,7 @@ class item db = object(self)
         let json = String.concat ", " json in
         let json = Printf.sprintf "[%s]" json in
         Wm.continue (`String json) rd
-      )    
+      )
 
 end
 
@@ -281,8 +281,8 @@ let main () =
   (* create the database *)
   let db = Db.create () in
   (* init the database with two items *)
-  let _ = 
-    Db.add db "{\"name\":\"item 1\"}" >>= 
+  let _ =
+    Db.add db "{\"name\":\"item 1\"}" >>=
     (fun _ -> Db.add db "{\"name\":\"item 2\"}")
   in
   (* the route table *)
