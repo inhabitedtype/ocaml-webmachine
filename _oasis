@@ -49,6 +49,14 @@ Executable hello_lwt
   Install:          false
   BuildDepends:     cohttp, cohttp.lwt, threads, webmachine
 
+Executable crud_lwt
+  Path:             examples
+  MainIs:           crud_lwt.ml
+  Build$:           flag(examples)
+  CompiledObject:   best
+  Install:          false
+  BuildDepends:     cohttp, cohttp.lwt, threads, webmachine
+
 Executable test_logic
   Path:             lib_test
   MainIs:           test_logic.ml

@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 6eea003bb0ccd7c1254f8f32aea0309d)
+# DO NOT EDIT (digest: 9f19cc42657d85558959116d35c2bafd)
 # Ignore VCS directories, you can use the same kind of rule outside
 # OASIS_START/STOP if you want to exclude directories that contains
 # useless stuff for the build process
@@ -39,6 +39,14 @@ true: annot, bin_annot
 <examples/hello_lwt.{native,byte}>: package(re.str)
 <examples/hello_lwt.{native,byte}>: package(threads)
 <examples/hello_lwt.{native,byte}>: use_webmachine
+# Executable crud_lwt
+<examples/crud_lwt.{native,byte}>: package(cohttp)
+<examples/crud_lwt.{native,byte}>: package(cohttp.lwt)
+<examples/crud_lwt.{native,byte}>: package(dispatch)
+<examples/crud_lwt.{native,byte}>: package(re)
+<examples/crud_lwt.{native,byte}>: package(re.str)
+<examples/crud_lwt.{native,byte}>: package(threads)
+<examples/crud_lwt.{native,byte}>: use_webmachine
 <examples/*.ml{,i,y}>: package(cohttp)
 <examples/*.ml{,i,y}>: package(cohttp.lwt)
 <examples/*.ml{,i,y}>: package(dispatch)
