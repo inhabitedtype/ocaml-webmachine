@@ -1,13 +1,13 @@
 OASISFormat: 0.4
 Name:        webmachine
-Version:     0.2.2
+Version:     0.2.3
 Synopsis:    A REST toolkit for OCaml
 Description: OCaml webmachine is a layer on top of cohttp that implements a
   state-machine-based HTTP request processor. It's particularly well-suited for
   writing RESTful APIs. As the name suggests, this is an OCaml port of the
   webmachine project.
-Authors:     Spiros Eliopoulos <spiros@inhabitedytpe.com>
-Maintainers: Spiros Eliopoulos <spiros@inhabitedytpe.com>
+Authors:     Spiros Eliopoulos <spiros@inhabitedtype.com>
+Maintainers: Spiros Eliopoulos <spiros@inhabitedtype.com>
 Homepage:    https://github.com/inhabitedtype/ocaml-webmachine
 Copyrights:  (C) 2015 Inhabited Type LLC
 License:     BSD-3-clause
@@ -23,7 +23,7 @@ Library webmachine
   Path:             lib
   InternalModules:  Wm_util
   Modules:          Webmachine
-  BuildDepends:     cohttp (>= 0.9.11), dispatch (>= 0.2.0), re (>= 1.3.0), re.str
+  BuildDepends:     cohttp (>= 0.9.11), dispatch (>= 0.3.0), re (>= 1.3.0), re.str
 
 Document webmachine
   Title:                webmachine docs

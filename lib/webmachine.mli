@@ -160,7 +160,7 @@ module type S = sig
       is useful for debugging. *)
 
   val dispatch :
-    (unit -> 'body resource) Dispatch.route list ->
+    ((Dispatch.tag * string) list * Dispatch.typ * (unit -> 'body resource)) list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option io
   (** [dispatch routes] returns a request handler that will iterate through
@@ -183,7 +183,7 @@ module type S = sig
    *)
 
   val dispatch' :
-    (unit -> 'body resource) Dispatch.DSL.route list ->
+    (string * (unit -> 'body resource)) list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option io
   (** [dispatch' routes ~body ~request] works in the same way as {dispatch'}
