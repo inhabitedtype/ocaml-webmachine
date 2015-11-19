@@ -1,6 +1,6 @@
 # OASIS_START
-# DO NOT EDIT (digest: bba397d04a2138e30447bde9d82cfaeb)
-version = "0.2.2"
+# DO NOT EDIT (digest: a652133402f3f318036084d951ab2ec4)
+version = "0.2.3"
 description = "A REST toolkit for OCaml"
 requires = "cohttp dispatch re re.str"
 archive(byte) = "webmachine.cma"
