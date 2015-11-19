@@ -145,60 +145,49 @@ class item db = object(self)
   (* Create a new item *)
   method private create_item rd =
     (* get the request body (should contains JSON) *)
-    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= (
-      fun v ->
-        (* create a new item *)
-        Db.add db v >>= (
-          fun new_id ->
-            (* return JSON data *)
-            let json = Printf.sprintf "{\"id\":%d}" new_id in
-            (* return also the location of this new item *)
-            let h = rd.Wm.Rd.resp_headers in
-            let h = Cohttp.Header.add_unless_exists h "location"
-                ("/items/" ^ (string_of_int new_id))
-            in
-            Lwt.return { rd with Wm.Rd.resp_body = `String json;
-                                 resp_headers = h }
-        )
-    )
+    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= fun v ->
+    Db.add db v >>= fun new_id ->
+      (* return JSON data *)
+      let json = Printf.sprintf "{\"id\":%d}" new_id in
+      (* return also the location of this new item *)
+      let h = rd.Wm.Rd.resp_headers in
+      let h = Cohttp.Header.add_unless_exists h "location"
+          ("/items/" ^ (string_of_int new_id))
+      in
+      Lwt.return { rd with Wm.Rd.resp_body = `String json;
+                           resp_headers = h }
 
   (* Modify an item *)
   method private modify_item rd =
     (* get the request body (should contains JSON) *)
-    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= (
-      fun v ->
-        (* get the item id from the url *)
-        let id = self#id rd in
-        (* modify the item *)
-        Db.put db id v >>= (
-          fun modified ->
-            (* return JSON data *)
-            let json =
-              if modified then
-                "{\"status\":\"not found\"}"
-              else
-                "{\"status\":\"ok\"}"
-            in
-            Lwt.return { rd with Wm.Rd.resp_body = `String json }
-        )
-    )
+    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= fun v ->
+    (* get the item id from the url *)
+    let id = self#id rd in
+    (* modify the item *)
+    Db.put db id v >>= fun modified ->
+      (* return JSON data *)
+      let json =
+        if modified then
+          "{\"status\":\"not found\"}"
+        else
+          "{\"status\":\"ok\"}"
+      in
+      Lwt.return { rd with Wm.Rd.resp_body = `String json }
 
   (* Delete an item *)
   method private delete_item rd =
     (* get the item id from the url *)
     let id = self#id rd in
     (* delete the item *)
-    Db.delete db id >>= (
-      fun deleted ->
-        (* return JSON data *)
-        let json =
-          if deleted then
-            "{\"status\":\"not found\"}"
-          else
-            "{\"status\":\"ok\"}"
-        in
-        Lwt.return { rd with Wm.Rd.resp_body = `String json }
-    )
+    Db.delete db id >>= fun deleted ->
+      (* return JSON data *)
+      let json =
+        if deleted then
+          "{\"status\":\"not found\"}"
+        else
+          "{\"status\":\"ok\"}"
+      in
+      Lwt.return { rd with Wm.Rd.resp_body = `String json }
 
   (* Get item(s) in JSON *)
   method private retrieve_item rd =
@@ -210,16 +199,10 @@ class item db = object(self)
       else
         Db.get db id
     in
-    let build_list acc (_, e) =
-      e :: acc
-    in
-    items >>= (fun items ->
-        let json = List.rev(List.fold_left build_list [] items) in
-        let json = String.concat ", " json in
-        let json = Printf.sprintf "[%s]" json in
-        Wm.continue (`String json) rd
-      )
-
+    items >>= fun items ->
+      let values = List.map snd items in
+      let json = Printf.sprintf "[%s]" (String.concat ", " values) in
+      Wm.continue (`String json) rd
 end
 
 let main () =
