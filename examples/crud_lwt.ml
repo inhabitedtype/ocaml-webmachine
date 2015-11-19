@@ -12,13 +12,13 @@
  *   ./crud_lwt.native
  *
  * - Test with curl (http://curl.haxx.se/):
- *   
+ *
  *   - Get a complete list of items:
  *     curl -i -w "\n" -X GET http://127.0.0.1:8080/items
  *
  *   - Get the item with id 1:
  *     curl -i -w "\n" -X GET http://127.0.0.1:8080/items/1
- *   
+ *
  *   - Create a new item:
  *     curl -i -w "\n" -X POST -d '{"name":"new item"}'
  *       http://127.0.0.1:8080/items
@@ -39,67 +39,49 @@ module Db = struct
   let create () =
     Lwt_mvar.create []
 
+  let id = ref 0
+
+  let with_db db ~f =
+    Lwt_mvar.take db   >>= fun l ->
+      let result, l' = f l in
+      Lwt_mvar.put db l' >|= fun () ->
+        result
+
   let get db id =
-    Lwt_mvar.take db >>= (fun l ->
-        let _ = Lwt_mvar.put db l in
-        let e =
-          if (List.mem_assoc id l) then
-            [(id, List.assoc id l)]
-          else
-            []
-        in
-        Lwt.return e
-      )
+    with_db db ~f:(fun l ->
+      if (List.mem_assoc id l) then
+        ([(id, List.assoc id l)], l)
+      else
+        ([], l))
 
   let get_all db =
-    Lwt_mvar.take db >>= (fun l ->
-        let _ = Lwt_mvar.put db l in
-        let l = List.fast_sort (fun (id1, _) (id2, _) -> compare id1 id2) l in
-        Lwt.return l
-      )
+    with_db db ~f:(fun l -> (l, l))
 
   let add db e =
-    Lwt_mvar.take db >>= (fun l ->
-        let l = List.fast_sort (fun (id1, _) (id2, _) -> compare id2 id1) l in
-        let id =
-          match l with
-          | [] -> 1
-          | (max, _) :: _ ->max + 1
-        in
-        let l = (id, e) :: l in
-        let _ = Lwt_mvar.put db l in
-        Lwt.return id
-      )
+    with_db db ~f:(fun l ->
+      incr id;
+      let l' = List.merge (fun x y -> compare (fst x) (fst y)) [!id, e] l in
+      (!id, l'))
 
   let put db id e =
-    Lwt_mvar.take db >>= (fun l ->
-        let id =
-          if (List.mem_assoc id l) then
-            let l = List.remove_assoc id l in
-            let l = (id, e) :: l in
-            let _ = Lwt_mvar.put db l in
-            id
-          else
-            let _ = Lwt_mvar.put db l in
-            0
-        in
-        Lwt.return id
-      )
+    let found = ref false in
+    with_db db ~f:(fun l ->
+      let l' = List.map (fun (id', e') ->
+        if id' = id
+          then begin found := true; (id', e') end
+          else (id', e))
+        l
+      in
+      (!found, l'))
 
   let delete db id =
-    Lwt_mvar.take db >>= (fun l ->
-        let id =
-          if (List.mem_assoc id l) then
-            let l = List.remove_assoc id l in
-            let _ = Lwt_mvar.put db l in
-            id
-          else
-            let _ = Lwt_mvar.put db l in
-            0
-        in
-        Lwt.return id
-      )
-
+    let deleted = ref false in
+    with_db db ~f:(fun l ->
+      let l' = List.filter (fun (id', _) ->
+        deleted := !deleted || id' <> id;
+        id <> id) l
+      in
+      (!deleted, l'))
 end
 
 (* Apply the [Webmachine.Make] functor to the Lwt_unix-based IO module
@@ -116,10 +98,6 @@ end
  * its default methods. *)
 class item db = object(self)
   inherit [Cohttp_lwt_body.t] Wm.resource
-
-  val db = db
-
-  method private get_db = db
 
   (* GET: retrieve an item or a list of items
    * POST: create a new item
@@ -170,7 +148,7 @@ class item db = object(self)
     Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= (
       fun v ->
         (* create a new item *)
-        Db.add self#get_db v >>= (
+        Db.add db v >>= (
           fun new_id ->
             (* return JSON data *)
             let json = Printf.sprintf "{\"id\":%d}" new_id in
@@ -192,11 +170,11 @@ class item db = object(self)
         (* get the item id from the url *)
         let id = self#id rd in
         (* modify the item *)
-        Db.put self#get_db id v >>= (
-          fun id ->
+        Db.put db id v >>= (
+          fun modified ->
             (* return JSON data *)
             let json =
-              if id = 0 then
+              if modified then
                 "{\"status\":\"not found\"}"
               else
                 "{\"status\":\"ok\"}"
@@ -210,11 +188,11 @@ class item db = object(self)
     (* get the item id from the url *)
     let id = self#id rd in
     (* delete the item *)
-    Db.delete self#get_db id >>= (
-      fun id ->
+    Db.delete db id >>= (
+      fun deleted ->
         (* return JSON data *)
         let json =
-          if id = 0 then
+          if deleted then
             "{\"status\":\"not found\"}"
           else
             "{\"status\":\"ok\"}"
@@ -228,9 +206,9 @@ class item db = object(self)
     let id = self#id rd in
     let items =
       if (id = 0) then
-        Db.get_all self#get_db
+        Db.get_all db
       else
-        Db.get self#get_db id
+        Db.get db id
     in
     let build_list acc (_, e) =
       e :: acc
