@@ -102,21 +102,6 @@ module Db = struct
 
 end
 
-(* Log to stderr *)
-module Log = struct
-  let method_called s =
-    Printf.eprintf "Method called: %s\n" s ;
-    flush_all ()
-
-  let info s =
-    Printf.eprintf "%s\n" s ;
-    flush_all ()
-
-  let error s =
-    Printf.eprintf "Error: %s\n" s ;
-    flush_all ()
-end
-
 (* Apply the [Webmachine.Make] functor to the Lwt_unix-based IO module
  * exported by cohttp. For added convenience, include the [Rd] module
  * as well so you don't have to go reaching into multiple modules to
@@ -141,12 +126,10 @@ class item db = object(self)
    * PUT: modify an item
    * DELETE: delete an item *)
   method allowed_methods rd =
-    Log.method_called "allowed_methods" ;
     Wm.continue [`GET; `POST; `PUT; `DELETE] rd
 
   (* Always return JSON *)
   method content_types_provided rd =
-    Log.method_called "content_types_provided" ;
     (* self#retrieve_item will be called for GET request *)
     Wm.continue [
       ("application/json", self#retrieve_item);
@@ -154,7 +137,6 @@ class item db = object(self)
 
   (* Accept only JSON data for PUT request *)
   method content_types_accepted rd =
-    Log.method_called "content_types_accepted" ;
     (* self#put will be called for PUT request *)
     Wm.continue [
       ("application/json", self#put);
@@ -162,19 +144,16 @@ class item db = object(self)
 
   (* Method called for POST request *)
   method process_post rd =
-    Log.method_called "process_post" ;
     self#create_item rd
     >>= Wm.continue true
 
   (* Method called for DELETE request *)
   method delete_resource rd =
-    Log.method_called "delete_resource" ;
     self#delete_item rd
     >>= Wm.continue true
 
   (* Get the id parameter from the url *)
   method private id rd =
-    Log.method_called "id" ;
     try
       let s = Wm.Rd.lookup_path_info_exn "id" rd in
       int_of_string s
@@ -183,16 +162,13 @@ class item db = object(self)
 
   (* PUT request *)
   method private put rd =
-    Log.method_called "put" ;
     self#modify_item rd >>= Wm.continue true
 
   (* Create a new item *)
   method private create_item rd =
-    Log.method_called "create_item" ;
     (* get the request body (should contains JSON) *)
     Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= (
       fun v ->
-        Log.info (Printf.sprintf "Body content: %s" v) ;
         (* create a new item *)
         Db.add self#get_db v >>= (
           fun new_id ->
@@ -210,14 +186,11 @@ class item db = object(self)
 
   (* Modify an item *)
   method private modify_item rd =
-    Log.method_called "modify_item" ;
     (* get the request body (should contains JSON) *)
     Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= (
       fun v ->
-        Log.info (Printf.sprintf "Body content: %s" v) ;
         (* get the item id from the url *)
         let id = self#id rd in
-        Log.info (Printf.sprintf "Item id: %d" id) ;
         (* modify the item *)
         Db.put self#get_db id v >>= (
           fun id ->
@@ -234,10 +207,8 @@ class item db = object(self)
 
   (* Delete an item *)
   method private delete_item rd =
-    Log.method_called "delete_item" ;
     (* get the item id from the url *)
     let id = self#id rd in
-    Log.info (Printf.sprintf "Item id: %d" id) ;
     (* delete the item *)
     Db.delete self#get_db id >>= (
       fun id ->
@@ -253,7 +224,6 @@ class item db = object(self)
 
   (* Get item(s) in JSON *)
   method private retrieve_item rd =
-    Log.method_called "retrieve_item" ;
     (* if there is no id, get all the items *)
     let id = self#id rd in
     let items =
@@ -275,7 +245,6 @@ class item db = object(self)
 end
 
 let main () =
-  let open Lwt.Infix in
   (* listen on port 8080 *)
   let port = 8080 in
   (* create the database *)
@@ -290,32 +259,45 @@ let main () =
     ("/items", fun () -> new item db) ;
     ("/items/:id", fun () -> new item db) ;
   ] in
-  let callback (_, _) request body =
-    try
-      (* perform route dispatch *)
-      Log.info "\nNew request" ;
-      Wm.dispatch' routes ~body ~request
-      >|= begin function
-        | None        -> (
-            `Not_found, Cohttp.Header.init (), `String "Not found", []
-          )
-        | Some result -> result
-      end
-      >>= fun (status, headers, body, _) ->
-      (* send the response to the client *)
+  let callback (ch,conn) request body =
+    let open Cohttp in
+    (* Perform route dispatch. If [None] is returned, then the URI path did not
+     * match any of the route patterns. In this case the server should return a
+     * 404 [`Not_found]. *)
+    Wm.dispatch' routes ~body ~request
+    >|= begin function
+      | None        -> (`Not_found, Header.init (), `String "Not found", [])
+      | Some result -> result
+    end
+    >>= fun (status, headers, body, path) ->
+      (* If you'd like to see the path that the request took through the
+       * decision diagram, then run this example with the [DEBUG_PATH]
+       * environment variable set. This should suffice:
+       *
+       *  [$ DEBUG_PATH= ./hello_lwt.native]
+       *
+       *)
+      let path =
+        match Sys.getenv "DEBUG_PATH" with
+        | _ -> Printf.sprintf " - %s" (String.concat ", " path)
+        | exception Not_found   -> ""
+      in
+      Printf.eprintf "%d - %s %s%s"
+        (Code.code_of_status status)
+        (Code.string_of_method (Request.meth request))
+        (Uri.path (Request.uri request))
+        path;
+      (* Finally, send the response to the client *)
       Server.respond ~headers ~body ~status ()
-    with
-    | e -> Log.error (Printexc.to_string e); raise e
   in
   (* create the server and handle requests with the function defined above *)
-  let config =
-    Server.make ~callback ()
+  let conn_closed (ch,conn) =
+    Printf.printf "connection %s closed\n%!"
+      (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
   in
-  (* listen only on 127.0.0.1 ip address *)
-  Conduit_lwt_unix.init ~src:"127.0.0.1" ()
-  >>= fun ctx ->
-  let ctx = Cohttp_lwt_unix_net.init ~ctx () in
-  Server.create ~ctx ~mode:(`TCP(`Port port)) config
-  >>= (fun () -> Lwt.return_unit)
+  let config = Server.make ~callback ~conn_closed () in
+  Server.create  ~mode:(`TCP(`Port port)) config
+  >>= (fun () -> Printf.eprintf "hello_lwt: listening on 0.0.0.0:%d%!" port;
+      Lwt.return_unit)
 
 let () =  Lwt_main.run (main ())
