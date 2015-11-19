@@ -144,12 +144,12 @@ module type S = sig
     (Code.status_code * Header.t * 'body * string list) IO.t
 
   val dispatch :
-    (unit -> 'body resource) Dispatch.route list ->
+    ((Dispatch.tag * string) list * Dispatch.typ * (unit -> 'body resource)) list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
 
   val dispatch' :
-    (unit -> 'body resource) Dispatch.DSL.route list ->
+    (string * (unit -> 'body resource)) list ->
     body:'body -> request:Request.t ->
     (Code.status_code * Header.t * 'body * string list) option IO.t
 end
