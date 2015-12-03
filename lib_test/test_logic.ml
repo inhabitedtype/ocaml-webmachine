@@ -86,7 +86,7 @@ class test_resource = object
 
   val _resource_exits = ref true
   val _service_available = ref true
-  val _is_authorized = ref `Yes
+  val _is_authorized = ref `Authorized
   val _forbidden = ref false
   val _malformed_request = ref false
   val _uri_too_long = ref false

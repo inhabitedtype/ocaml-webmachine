@@ -107,6 +107,12 @@ module type S = sig
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
+  type auth =
+    [ `Authorized
+    | `Basic of string
+    | `Redirect of Uri.t
+    ]
+
   val continue : 'a -> ('a, 'body) op
   (** [continue a rd] is equivalent to [IO.return (Ok x, rd)] *)
 
@@ -121,7 +127,7 @@ module type S = sig
 
     method resource_exists : (bool, 'body) op
     method service_available : (bool, 'body) op
-    method is_authorized : ([`Yes | `No of string], 'body) op
+    method is_authorized : (auth, 'body) op
     method forbidden : (bool, 'body) op
     method malformed_request : (bool, 'body) op
     method uri_too_long : (bool, 'body) op
