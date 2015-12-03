@@ -1,35 +1,38 @@
-(*
- * CRUD (Create, Retrieve, Update, Delete) API example.
- * The application basically stores the request body
- * data in an association list. There is no real JSON
- * decoding.
- *
- * - How to build:
- *   ocamlbuild -use-ocamlfind -pkgs lwt,cohttp.lwt,webmachine
- *     crud_lwt.native
- *
- * - Run the server:
- *   ./crud_lwt.native
- *
- * - Test with curl (http://curl.haxx.se/):
- *
- *   - Get a complete list of items:
- *     curl -i -w "\n" -X GET http://127.0.0.1:8080/items
- *
- *   - Get the item with id 1:
- *     curl -i -w "\n" -X GET http://127.0.0.1:8080/items/1
- *
- *   - Create a new item:
- *     curl -i -w "\n" -X POST -d '{"name":"new item"}'
- *       http://127.0.0.1:8080/items
- *
- *   - Modify the item with id 1:
- *     curl -i -w "\n" -X PUT -H 'Content-Type: application/json'
- *       -d '{"name":"modified item"}' http://127.0.0.1:8080/items/1
- *
- *   - Delete the item with id 1:
- *     curl -i -w "\n" -X DELETE http://127.0.0.1:8080/items/1
-*)
+(** An example CRUD API for id-based operations on JSON objects. The objects are
+    stored in-memory and therefore will not persist across runs of the database.
+    The application does not perform any JSON validation at this time.
+
+    Build by enabling the [examples] configuration flag:
+
+      [./configure --enable-examples]
+
+    ... or build using the following command (if webmachine is already
+    installed):
+
+      [ocamlbuild -use-ocamlfind -pkgs lwt,cohttp.lwt,webmachine crud_lwt.native]
+
+    Run using the following command, which will display the path that each
+    request takes through the decision diagram:
+
+      [DEBUG_PATH= ./crud_lwt.native]
+
+    Here are some sample CURL command to test on a running server:
+
+      - Get a complete list of items:
+        [curl -i -w "\n" -X GET http://localhost:8080/items]
+
+      - Get the item with id 1:
+        [curl -i -w "\n" -X GET http://localhost:8080/item/1]
+
+      - Create a new item:
+        [curl -i -w "\n" -X POST -d '{"name":"new item"}' http://localhost:8080/items]
+
+      - Modify the item with id 1:
+        [curl -i -w "\n" -X PUT -H 'Content-Type: application/json'\
+          -d '{"name":"modified item"}' http://localhost:8080/item/1]
+
+      - Delete the item with id 1:
+        [curl -i -w "\n" -X DELETE http://localhost:8080/item/1] *)
 
 open Cohttp_lwt_unix
 open Lwt.Infix
@@ -50,9 +53,9 @@ module Db = struct
   let get db id =
     with_db db ~f:(fun l ->
       if (List.mem_assoc id l) then
-        ([(id, List.assoc id l)], l)
+        (Some(id, List.assoc id l), l)
       else
-        ([], l))
+        (None, l))
 
   let get_all db =
     with_db db ~f:(fun l -> (l, l))
@@ -93,116 +96,90 @@ module Wm = struct
   include Webmachine.Make(Cohttp_lwt_unix_io)
 end
 
-(* Create a new class that inherits from [Wm.resource] and provides
- * implementations for its two virtual methods, and overrides some of
- * its default methods. *)
+(** A resource for querying all the items in the database via GET and creating
+    a new item via POST. Check the [Location] header of a successful POST
+    response for the URI of the item. *)
+class items db = object(self)
+  inherit [Cohttp_lwt_body.t] Wm.resource
+
+  method private to_json rd =
+    Db.get_all db
+    >|= List.map snd
+    >>= fun values ->
+      let json = Printf.sprintf "[%s]" (String.concat ", " values) in
+      Wm.continue (`String json) rd
+
+  method allowed_methods rd =
+    Wm.continue [`GET; `HEAD; `POST] rd
+
+  method content_types_provided rd =
+    Wm.continue [
+      "application/json", self#to_json
+    ] rd
+
+  method content_types_accepted rd =
+    Wm.continue [] rd
+
+  method process_post rd =
+    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= fun body ->
+    Db.add db body >>= fun new_id ->
+    let rd' = Wm.Rd.redirect ("/item/" ^ (string_of_int new_id)) rd in
+    Wm.continue true rd'
+end
+
+(** A resource for querying an individual item in the database by id via GET,
+    modifying an item via PUT, and deleting an item via DELETE. *)
 class item db = object(self)
   inherit [Cohttp_lwt_body.t] Wm.resource
 
-  (* GET: retrieve an item or a list of items
-   * POST: create a new item
-   * PUT: modify an item
-   * DELETE: delete an item *)
+  method private of_json rd =
+    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= fun body ->
+    Db.put db (self#id rd) body >>= fun modified ->
+      let resp_body =
+        if modified
+          then `String "{\"status\":\"ok\"}"
+          else `String "{\"status\":\"not found\"}"
+      in
+      Wm.continue modified { rd with Wm.Rd.resp_body }
+
+  method private to_json rd =
+    Db.get db (self#id rd)
+    >>= function
+      | None            -> assert false
+      | Some (_, value) ->
+        Wm.continue (`String value) rd
+
   method allowed_methods rd =
-    Wm.continue [`GET; `POST; `PUT; `DELETE] rd
+    Wm.continue [`GET; `HEAD; `PUT; `DELETE] rd
 
-  (* Always return JSON *)
+  method resource_exists rd =
+    Db.get db (self#id rd)
+    >>= function
+      | None   -> Wm.continue false rd
+      | Some _ -> Wm.continue true rd
+
   method content_types_provided rd =
-    (* self#retrieve_item will be called for GET request *)
     Wm.continue [
-      ("application/json", self#retrieve_item);
+      "application/json", self#to_json
     ] rd
 
-  (* Accept only JSON data for PUT request *)
   method content_types_accepted rd =
-    (* self#put will be called for PUT request *)
     Wm.continue [
-      ("application/json", self#put);
+      "application/json", self#of_json
     ] rd
 
-  (* Method called for POST request *)
-  method process_post rd =
-    self#create_item rd
-    >>= Wm.continue true
-
-  (* Method called for DELETE request *)
   method delete_resource rd =
-    self#delete_item rd
-    >>= Wm.continue true
+    Db.delete db (self#id rd)
+    >>= fun deleted ->
+      let resp_body =
+        if deleted
+          then `String "{\"status\":\"ok\"}"
+          else `String "{\"status\":\"not found\"}"
+      in
+      Wm.continue deleted { rd with Wm.Rd.resp_body }
 
-  (* Get the id parameter from the url *)
   method private id rd =
-    try
-      let s = Wm.Rd.lookup_path_info_exn "id" rd in
-      int_of_string s
-    with
-    | _ -> 0
-
-  (* PUT request *)
-  method private put rd =
-    self#modify_item rd >>= Wm.continue true
-
-  (* Create a new item *)
-  method private create_item rd =
-    (* get the request body (should contains JSON) *)
-    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= fun v ->
-    Db.add db v >>= fun new_id ->
-      (* return JSON data *)
-      let json = Printf.sprintf "{\"id\":%d}" new_id in
-      (* return also the location of this new item *)
-      let h = rd.Wm.Rd.resp_headers in
-      let h = Cohttp.Header.add_unless_exists h "location"
-          ("/items/" ^ (string_of_int new_id))
-      in
-      Lwt.return { rd with Wm.Rd.resp_body = `String json;
-                           resp_headers = h }
-
-  (* Modify an item *)
-  method private modify_item rd =
-    (* get the request body (should contains JSON) *)
-    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= fun v ->
-    (* get the item id from the url *)
-    let id = self#id rd in
-    (* modify the item *)
-    Db.put db id v >>= fun modified ->
-      (* return JSON data *)
-      let json =
-        if modified then
-          "{\"status\":\"not found\"}"
-        else
-          "{\"status\":\"ok\"}"
-      in
-      Lwt.return { rd with Wm.Rd.resp_body = `String json }
-
-  (* Delete an item *)
-  method private delete_item rd =
-    (* get the item id from the url *)
-    let id = self#id rd in
-    (* delete the item *)
-    Db.delete db id >>= fun deleted ->
-      (* return JSON data *)
-      let json =
-        if deleted then
-          "{\"status\":\"not found\"}"
-        else
-          "{\"status\":\"ok\"}"
-      in
-      Lwt.return { rd with Wm.Rd.resp_body = `String json }
-
-  (* Get item(s) in JSON *)
-  method private retrieve_item rd =
-    (* if there is no id, get all the items *)
-    let id = self#id rd in
-    let items =
-      if (id = 0) then
-        Db.get_all db
-      else
-        Db.get db id
-    in
-    items >>= fun items ->
-      let values = List.map snd items in
-      let json = Printf.sprintf "[%s]" (String.concat ", " values) in
-      Wm.continue (`String json) rd
+    int_of_string (Wm.Rd.lookup_path_info_exn "id" rd)
 end
 
 let main () =
@@ -210,15 +187,10 @@ let main () =
   let port = 8080 in
   (* create the database *)
   let db = Db.create () in
-  (* init the database with two items *)
-  let _ =
-    Db.add db "{\"name\":\"item 1\"}" >>=
-    (fun _ -> Db.add db "{\"name\":\"item 2\"}")
-  in
   (* the route table *)
   let routes = [
-    ("/items", fun () -> new item db) ;
-    ("/items/:id", fun () -> new item db) ;
+    ("/items", fun () -> new items db) ;
+    ("/item/:id", fun () -> new item db) ;
   ] in
   let callback (ch,conn) request body =
     let open Cohttp in
@@ -235,7 +207,7 @@ let main () =
        * decision diagram, then run this example with the [DEBUG_PATH]
        * environment variable set. This should suffice:
        *
-       *  [$ DEBUG_PATH= ./hello_lwt.native]
+       *  [$ DEBUG_PATH= ./crud_lwt.native]
        *
        *)
       let path =
@@ -256,6 +228,9 @@ let main () =
     Printf.printf "connection %s closed\n%!"
       (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
   in
+  (* init the database with two items *)
+  Db.add db "{\"name\":\"item 1\"}" >>= fun _ ->
+  Db.add db "{\"name\":\"item 2\"}" >>= fun _ ->
   let config = Server.make ~callback ~conn_closed () in
   Server.create  ~mode:(`TCP(`Port port)) config
   >>= (fun () -> Printf.eprintf "hello_lwt: listening on 0.0.0.0:%d%!" port;
