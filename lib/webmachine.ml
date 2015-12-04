@@ -164,6 +164,9 @@ module type S = sig
     (Code.status_code * Header.t * 'body * string list) option io
 end
 
+let default_variances =
+  [ "Accept"; "Accept-Encoding"; "Accept-Charset"; "Accept-Language"]
+
 module Make(IO:IO) = struct
   type +'a io = 'a IO.t
 
@@ -617,6 +620,7 @@ module Make(IO:IO) = struct
     method v3g7 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3g7";
       self#run_op resource#variances >>~ fun variances ->
+      let variances = variances @ default_variances in
       begin match String.concat ", " variances with
       | ""   -> ()
       | vary -> self#set_response_header "vary" vary
