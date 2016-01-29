@@ -61,6 +61,9 @@ class base_path str = object
   method content_types_accepted rd =
     Webmachine.continue [] rd
 
+  method patch_content_types_accepted rd =
+    Webmachine.continue [] rd
+
   method allowed_methods rd =
     Webmachine.continue [`GET] rd
 end
@@ -79,6 +82,9 @@ class param_path key = object
   method content_types_accepted rd =
     Webmachine.continue [] rd
 
+  method patch_content_types_accepted rd =
+    Webmachine.continue [] rd
+
   method allowed_methods rd =
     Webmachine.continue [`GET] rd
 end
@@ -94,6 +100,9 @@ class disp_path = object
     ] rd
 
   method content_types_accepted rd =
+    Webmachine.continue [] rd
+
+  method patch_content_types_accepted rd =
     Webmachine.continue [] rd
 
   method allowed_methods rd =

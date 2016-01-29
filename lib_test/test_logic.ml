@@ -52,7 +52,7 @@ open Cohttp
 
 let http_1_0_methods = [`GET; `POST; `HEAD]
 let http_1_1_methods =
-  [`GET; `HEAD; `POST; `PUT; `DELETE; `Other "TRACE"; `Other "CONNECT"; `OPTIONS]
+  [`GET; `HEAD; `PATCH; `POST; `PUT; `DELETE; `Other "TRACE"; `Other "CONNECT"; `OPTIONS]
 let default_allowed_methods = [`GET; `HEAD; `PUT]
 
 let to_html rd = Webmachine.continue (`String "<html><body>Foo</body></html>") rd
@@ -73,16 +73,21 @@ class test_resource = object
 
   val _content_types_provided = ref ["text/html", to_html]
   val _content_types_accepted = ref []
+  val _patch_content_types_accepted = ref []
 
   method content_types_provided rd =
     Webmachine.continue !_content_types_provided rd
   method content_types_accepted rd =
     Webmachine.continue !_content_types_accepted rd
+  method patch_content_types_accepted rd =
+    Webmachine.continue !_patch_content_types_accepted rd
 
   method set_content_types_provided v =
     _content_types_provided := v
   method set_content_types_accepted v =
     _content_types_accepted := v
+  method set_patch_content_types_accepted v =
+    _patch_content_types_accepted := v
 
   val _resource_exits = ref true
   val _service_available = ref true
@@ -95,7 +100,7 @@ class test_resource = object
   val _valid_entity_length = ref true
   val _options = ref []
   val _allowed_methods = ref [`GET; `HEAD]
-  val _known_methods = ref [`GET; `HEAD; `POST; `PUT; `DELETE; `Other "TRACE"; `Other "CONNECT"; `OPTIONS]
+  val _known_methods = ref [`GET; `HEAD; `PATCH; `POST; `PUT; `DELETE; `Other "TRACE"; `Other "CONNECT"; `OPTIONS]
   val _delete_resource = ref false
   val _delete_completed = ref true
   val _process_post = ref false
