@@ -20,6 +20,7 @@ true: annot, bin_annot
 <lib/*.ml{,i,y}>: package(dispatch)
 <lib/*.ml{,i,y}>: package(re)
 <lib/*.ml{,i,y}>: package(re.str)
+<lib/*.ml{,i,y}>: package(calendar)
 # Executable hello_async
 <examples/hello_async.{native,byte}>: package(async)
 <examples/hello_async.{native,byte}>: package(cohttp)

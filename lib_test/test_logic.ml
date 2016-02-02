@@ -705,6 +705,17 @@ precond_fail_h12() ->
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
 *)
+let precond_fail_h12 () =
+  let headers = Header.of_list [("Last-Modified", "Wed, 20 Feb 2013 10:00:00 GMT");
+                                 ("If-Unmodified-Since", "Wed, 20 Feb 2013 17:00:00 GMT")] in
+  let result = with_test_resource' begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    Request.make ~headers ~meth:`GET Uri.(of_string "/"), `String "foo"
+  end in
+  assert_path ~msg:"412 result via j18, i13, i12, h10" result Path.to_h12_no_acpthead;
+  assert_status ~msg:"412 result via j18, i13, i12, h10" result 412;
+;;
+
 
 let precond_fail_j18 () =
   let headers = Header.of_list [("If-None-Match", "*"); ("Content-Type", "text/plain")] in
@@ -824,21 +835,16 @@ content_md5_custom_inval_b9a() ->
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
 
-%% 401 result via B8
-authorized_b8() ->
-    put_setting(is_authorized, "Basic"),
-    put_setting(allowed_methods, ['GET']),
-    {ok, Result} = httpc:request(get, {url("foo"), []}, [], []),
-    {{Protocol, Code, Status}, Headers, _} = Result,
-    ?assertEqual("HTTP/1.1", Protocol),
-    ?assertEqual(401, Code),
-    ?assertEqual("Unauthorized", Status),
-    ?assertEqual({"www-authenticate", "Basic"}, lists:keyfind("www-authenticate", 1, Headers)),
-    ExpectedDecisionTrace = ?PATH_TO_B8,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
-
 *)
+let authorized_b8 () =
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_is_authorized (`Basic "basic");
+    Request.make ~meth:`GET Uri.(of_string "/authorisedfoo")
+  end in
+  assert_path ~msg:"401 result via B9" result Path.to_b8;
+  assert_status ~msg:"401 result via B8" result 401;
+;;
 
 let forbidden_b7 () =
   let result = with_test_resource begin fun resource ->
@@ -1440,9 +1446,10 @@ let _ =
     "not_acceptable_f7_e6_d5_c4" >:: not_acceptable_f7_e6_d5_c4;
     "precond_fail_no_resource" >:: precond_fail_no_resource;
     "precond_fail_g11" >:: precond_fail_g11;
-    (* "precond_fail_h12" >:: precond_fail_h12; *)
+    "precond_fail_h12" >:: precond_fail_h12;
     "precond_fail_j18" >:: precond_fail_j18;
     "content_valid" >:: content_valid;
+    "authorized_b8" >:: authorized_b8;
     "forbidden_b7" >:: forbidden_b7;
     "options_b3" >:: options_b3;
     "variances_o18" >:: variances_o18;
