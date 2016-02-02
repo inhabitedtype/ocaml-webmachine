@@ -679,7 +679,6 @@ module Make(IO:IO) = struct
 
     method v3h12 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3h12";
-      (* failwith "NYI: v3h12" *)
       try
         let u_mod = self#get_request_header "if-unmodified-since" in
         let l_mod = self#get_request_header "last-modified" in
