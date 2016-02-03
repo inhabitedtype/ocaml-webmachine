@@ -42,8 +42,23 @@ end
 
 module Webmachine = struct
   module Rd = Webmachine.Rd
+
   include Webmachine.Make(Id)
+
 end
+
+(* TODO pull in from wm_util.ml rather than copy pasta *)
+module Date = struct
+  open CalendarLib
+
+  let parse_rfc1123_date_exn s =
+    Printer.Time.from_fstring "%a, %d %b %Y %H:%M:%S GMT" s
+
+  let parse_rfc1123_date s =
+    try (Some (parse_rfc1123_date_exn s)) with
+    | Invalid_argument _ -> None
+end
+
 
 open Id
 let run = Id.run
@@ -987,19 +1002,22 @@ not_modified_j18_via_h12() ->
     ExpectedDecisionTrace = ?PATH_TO_J18_NO_ACPTHEAD_3,
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
+*)
 
-%% 304 result via L17
-not_modified_l17() ->
-    put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
-    put_setting(last_modified, ?FIRST_DAY_OF_LAST_YEAR),
-    put_setting(expires, ?FIRST_DAY_OF_NEXT_YEAR),
-    RFC1123LastYear = httpd_util:rfc1123_date(?FIRST_DAY_OF_LAST_YEAR),
-    Headers = [{"If-Modified-Since", RFC1123LastYear}],
-    {ok, Result} = httpc:request(get, {url(), Headers}, [], []),
-    ?assertMatch({{"HTTP/1.1", 304, "Not Modified"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_L17_NO_ACPTHEAD,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
+let not_modified_l17 () =
+  let first_day_of_last_year = "Tue, 01 Jan 2015 00:00:00 GMT" in
+  let first_day_of_next_year = "Sun, 01 Jan 2017 00:00:00 GMT" in
+  let headers = Header.of_list [("If-Modified-Since", first_day_of_last_year)] in
+  let result = with_test_resource begin fun resource ->
+    resource#set_last_modified (Some first_day_of_last_year);
+    resource#set_expires (Some first_day_of_next_year);
+    Request.make ~headers ~meth:`GET Uri.(of_string "/foo");
+  end in
+  assert_path ~msg:"304 via l17" result Path.to_l17_no_acpthead;
+  assert_status ~msg:"304 via l17" result 304;
+;;
+
+(*
 
 %% 303 result via N11 using request data rewriting
 see_other_n11() ->
@@ -1440,6 +1458,7 @@ let _ =
     "variances_o18" >:: variances_o18;
     "variances_o18_2" >:: variances_o18_2;
     "multiple_choices_o18" >:: multiple_choices_o18;
+    "not_modified_l17" >:: not_modified_l17;
     "create_p11_put" >:: create_p11_put
   ] in
   let suite = (Printf.sprintf "test logic") >::: tests in

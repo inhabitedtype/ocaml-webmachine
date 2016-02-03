@@ -774,7 +774,38 @@ module Make(IO:IO) = struct
 
     method v3l14 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3l14";
-      failwith "NYI: v3l14"
+      match (self#get_request_header "if-modified-since") with
+      | None -> self#v3m16
+      | Some date ->
+         match (Util.Date.parse_rfc1123_date date) with
+         | Some _ -> self#v3l15
+         | None ->  self#v3m16
+
+    method v3l15 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3l15";
+      let now = CalendarLib.Time.now() in
+      match (self#get_request_header "if-modified-since") with
+      | None -> self#v3l17
+      | Some date ->
+         match (Util.Date.parse_rfc1123_date date) with
+         | None -> self#v3l17
+         | Some d -> match (d > now) with
+                     | true -> self#v3m16
+                     | false -> self#v3l17
+
+    method v3l17 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3l17";
+      try
+        let u_mod = self#get_request_header "if-modified-since" in
+        let l_mod = self#get_response_header "last-modified" in
+        match (u_mod, l_mod) with
+        | (Some l_mod', Some u_mod') ->
+           (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
+           | true -> self#v3m16
+           | false -> self#halt 304)
+        | (_, _) -> self#halt 304
+      with
+        Invalid_argument _ -> self#halt 304
 
     method v3j18 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3j18";

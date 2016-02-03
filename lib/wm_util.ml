@@ -118,10 +118,7 @@ module MediaType = struct
     loop ranges
 end
 
-
 module Date = struct
-  (* "%a, %d %b %Y %H:%M:%S GMT" *)
-  (* TODO valid RFC1123 parsing here! *)
   open CalendarLib
 
   let parse_rfc1123_date_exn s =
