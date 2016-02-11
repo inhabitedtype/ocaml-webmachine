@@ -23,7 +23,7 @@ Library webmachine
   Path:             lib
   InternalModules:  Wm_util
   Modules:          Webmachine
-  BuildDepends:     cohttp (>= 0.9.11), dispatch (>= 0.3.0), re (>= 1.3.0), re.str
+  BuildDepends:     cohttp (>= 0.9.12), dispatch (>= 0.3.0), re (>= 1.3.0), re.str
 
 Document webmachine
   Title:                webmachine docs
