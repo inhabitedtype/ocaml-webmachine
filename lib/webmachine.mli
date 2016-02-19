@@ -31,6 +31,15 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
+(** A REST toolkit for OCaml.
+
+    Webmachine is a port of the Erlang project of the
+    {{:http://webmachine.github.io/}same name}, designed to work as a
+    REST-aware layer on top of {{:https://github.com/mirage/ocaml-cohttp} cohttp}.
+
+    To use this module, apply the {{!Make}[Make]} functor to an {{!IO}[IO]}
+    module, and subclass the {{!classtype:S.resource}resouce} virtual class. *)
+
 open Cohttp
 
 (** The [IO] module signature abstracts over monadic futures library. It is a
@@ -119,6 +128,7 @@ module type S = sig
   val respond : ?body:'body -> int -> ('a, 'body) op
   (** [respond ?body n rd] is equivalent to [IO.return (Error n, { rd with resp_body = body }] *)
 
+  (** The resource parent class. *)
   class virtual ['body] resource : object
     constraint 'body = [> `Empty]
 
@@ -126,33 +136,128 @@ module type S = sig
     method virtual content_types_accepted : ((string * ('body acceptor)) list, 'body) op
 
     method resource_exists : (bool, 'body) op
+    (** Returning [false] will result in a [404 Not Found].
+
+        {i Default}: [true] *)
+
     method service_available : (bool, 'body) op
+    (** Returning [false] will result in a [503 Service Unavilable].
+
+        {i Default}: [true] *)
+
     method is_authorized : (auth, 'body) op
+
     method forbidden : (bool, 'body) op
+    (** Returning [true] will result in a [403 Forbidden].
+
+        {i Default}: [false] *)
+
     method malformed_request : (bool, 'body) op
+    (** Returning [true] will result in a [400 Bad Request].
+
+        {i Default}: [false] *)
+
     method uri_too_long : (bool, 'body) op
+    (** Returning [true] will result in a [414 Request-URI Too Long].
+
+        {i Default}: [false] *)
+
     method known_content_type : (bool, 'body) op
+    (** Returning [false] will result in a [415 Unsupported Media Type].
+
+        {i Default}: [true] *)
+
     method valid_content_headers : (bool, 'body) op
+    (** Returning [false] will result in a [501 Not Implemented].
+
+        {i Default}: [true] *)
+
     method valid_entity_length : (bool, 'body) op
+    (** Returning [false] will result in [413 Request Entity Too Large].
+
+        {i Default} : [false] *)
+
     method options : ((string * string) list, 'body) op
-    method allowed_methods : (Code.meth list, 'body) op
+    (** If the [`OPTIONS] method is supported by this resource, the returned
+        list of header name/value pairs will be included in responses to
+        [`OPTIONS] requests.
+
+        {i Default}: [\[("allow", self#allowed_methods)\]] *)
+
     method known_methods : (Code.meth list, 'body) op
+    (** A request to this resource whose method is not included in the returned
+        list will result in a [501 Not Implemented].
+
+        {i Default}: [\[`GET; `HEAD; `POST; `PUT; `DELETE; `Other "TRACE"; `Other "CONNECT"; `OPTIONS\]] *)
+
+    method allowed_methods : (Code.meth list, 'body) op
+    (** A request to this resource whose method is not included in the returned
+        list will result in a [405 Method Not Allowed]. The response will
+        include an ["allow"] header that lists the allowed methods.
+
+        {i Default}: [\[`GET; `HEAD\]] *)
+
     method delete_resource : (bool, 'body) op
+    (** [`DELETE] requests will call this method. Returning [true] indicates
+        that the deletion succeeded.
+
+        {i Default}: [false] *)
+
     method delete_completed : (bool, 'body) op
+    (** Only successful {{!delete_resource}delete_resource} calls will result
+        in a call to this method. Return [false] if the deletion was accepted
+        but cannot yet be guaranteed to have finished.
+
+        {i Default}: [true] *)
+
     method process_post : (bool, 'body) op
+    (** [`POST] requests will call this method. Returning true indicates the
+         POST succeeded. *)
+
     method language_available : (bool, 'body) op
+    (** Returning [false] will result in a [406 Not Acceptable].
+
+        {i Default}: [true] *)
+
     method charsets_provided : ((string * ('body -> 'body)) list, 'body) op
     method encodings_provided : ((string * ('body -> 'body)) list, 'body) op
+
     method variances : (string list, 'body) op
+    (** Returns a list of header names that should be included in the
+        response's [Vary] header. The standard content negotiation headers
+        (i.e., [Accept], [Accept-Encoding], [Accept-Charset], [Accept-Language])
+        will automatically be added if needed, and therefore do not need to be
+        specified here.
+
+        {i Default}: [[]] *)
+
     method is_conflict : (bool, 'body) op
+    (** Returning [true] will result in a [409 Conflict].
+
+        {i Default}: false *)
+
     method multiple_choices : (bool, 'body) op
+    (** Returning [true] indicates that multiple representations of the
+        resource exist and a single one cannot be automatically chosen, resulting
+        in a [300 Multiple Choices] rather than a [200 OK].
+
+        {i Default}: false *)
+
     method previously_existed : (bool, 'body) op
     method moved_permanently : (Uri.t option, 'body) op
     method moved_temporarily : (Uri.t option, 'body) op
+
     method last_modified : (string option, 'body) op
     method expires : (string option, 'body) op
+
     method generate_etag : (string option, 'body) op
+    (** Returning [Some string] will use [string] for the [ETag] header.
+
+        {i Default}: [None] *)
+
     method finish_request : (unit, 'body) op
+    (** This method is called just before the final response is constructed and
+        returned. *)
   end
 
   val to_handler :
@@ -174,7 +279,7 @@ module type S = sig
       URI path. The form that the individal route entries takes this the
       following:
 
-        {[(pattern, exact, resource_constructor]}
+        {[(pattern, exact, resource_constructor)]}
 
       The [pattern] itself is a list of literal ([`Lit]) or variable matches
       ([`Var]) that the URI path should satify. For example, a route entry that
