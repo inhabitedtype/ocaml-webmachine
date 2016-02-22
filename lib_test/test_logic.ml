@@ -42,8 +42,23 @@ end
 
 module Webmachine = struct
   module Rd = Webmachine.Rd
+
   include Webmachine.Make(Id)
+
 end
+
+(* TODO pull in from wm_util.ml rather than copy pasta *)
+module Date = struct
+  open CalendarLib
+
+  let parse_rfc1123_date_exn s =
+    Printer.Time.from_fstring "%a, %d %b %Y %H:%M:%S GMT" s
+
+  let parse_rfc1123_date s =
+    try (Some (parse_rfc1123_date_exn s)) with
+    | Invalid_argument _ -> None
+end
+
 
 open Id
 let run = Id.run
@@ -690,21 +705,19 @@ let precond_fail_g11 () =
   assert_status ~msg:"412 result via G11" result 412;
 ;;
 
-(*
-%% 412 result via H12, greater last modified
-precond_fail_h12() ->
-    put_setting(allowed_methods, ['GET']),
-    TenAM = "Wed, 20 Feb 2013 10:00:00 GMT",
-    FivePM = "Wed, 20 Feb 2013 17:00:00 GMT",
-    ResErlDate = httpd_util:convert_request_date(FivePM),
-    put_setting(last_modified, ResErlDate),
-    Headers = [{"If-Unmodified-Since", TenAM}],
-    {ok, Result} = httpc:request(get, {url(), Headers}, [], []),
-    ?assertMatch({{"HTTP/1.1", 412, "Precondition Failed"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_H12_NO_ACPTHEAD,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
-*)
+let precond_fail_h12 () =
+  let ten_am = "Wed, 20 Feb 2013 10:00:00 GMT" in
+  let five_pm = "Wed, 20 Feb 2013 17:00:00 GMT" in
+  let headers = Header.of_list [("If-Unmodified-Since", ten_am)] in
+  let result = with_test_resource' begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_last_modified (Some five_pm);
+    Request.make ~headers ~meth:`GET Uri.(of_string "/"), `String "foo"
+  end in
+  assert_path ~msg:"412 result via h12, i13, i12, h10, h11" result Path.to_h12_no_acpthead;
+  assert_status ~msg:"412 result via h12, i13, i12, h10, h11" result 412;
+;;
+
 
 let precond_fail_j18 () =
   let headers = Header.of_list [("If-None-Match", "*"); ("Content-Type", "text/plain")] in
@@ -712,43 +725,41 @@ let precond_fail_j18 () =
     resource#set_allowed_methods default_allowed_methods;
     Request.make ~headers ~meth:`PUT Uri.(of_string "/"), `String "foo"
   end in
-  assert_path ~msg:"412 result via j18, i13, i12, h10" result Path.to_j18_no_acpthead;
-  assert_status ~msg:"412 result via j18, i13, i12, h10" result 412;
+  assert_path ~msg:"412 result via J18 via I13 via I12 via H10" result Path.to_j18_no_acpthead;
+  (* TODO fix these ~msg strings*)
+  assert_status ~msg:"412 result via J18 via I13 via I12 via H10" result 412;
 ;;
 
-(*
+let precond_fail_j18_via_k13 () =
+  let headers = Header.of_list [("If-Match", "v1");
+                                ("If-None-Match", "v1");
+                                ("If-Unmodified-Since", "nonsense-date");
+                                ("Content-Type", "text/plain")] in
+  let result = with_test_resource' begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_generate_etag (Some "v1");
+    Request.make ~headers ~meth:`PUT Uri.(of_string "/"), `String "foo"
+  end in
+  assert_path ~msg:"412 result via J18 via K13 via H11 via G11" result Path.to_j18_no_acpthead_2;
+  (* TODO fix these ~msg strings*)
+  assert_status ~msg:"412 result via J18 via K13 via H11 via G11" result 412;
+;;
 
-%% 412 result via J18 via K13 via H11 via G11
-precond_fail_j18_via_k13() ->
-    put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
-    put_setting(generate_etag, "v1"),
-    Headers = [{"If-Match", "\"v1\""},
-               {"If-None-Match", "\"v1\""},
-               {"If-Unmodified-Since", "{{INVALID DATE}}"}],
-    PutRequest = {url(), Headers, "text/plain", "foo"},
-    {ok, Result} = httpc:request(put, PutRequest, [], []),
-    ?assertMatch({{"HTTP/1.1", 412, "Precondition Failed"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_J18_NO_ACPTHEAD_2,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
-
-%% 412 result via J18 via I13 via I12 via H12
-precond_fail_j18_via_h12() ->
-    put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
-    TenAM = "Wed, 20 Feb 2013 10:00:00 GMT",
-    FivePM = "Wed, 20 Feb 2013 17:00:00 GMT",
-    ResErlDate = httpd_util:convert_request_date(TenAM),
-    put_setting(last_modified, ResErlDate),
-    Headers = [{"If-Match", "*"},
-               {"If-None-Match", "*"},
-               {"If-Unmodified-Since", FivePM}],
-    PutRequest = {url(), Headers, "text/plain", "foo"},
-    {ok, Result} = httpc:request(put, PutRequest, [], []),
-    ?assertMatch({{"HTTP/1.1", 412, "Precondition Failed"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_J18_NO_ACPTHEAD_3,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
-*)
+let precond_fail_j18_via_h12 () =
+  let ten_am =  "Wed, 20 Feb 2013 10:00:00 GMT" in
+  let five_pm = "Wed, 20 Feb 2013 17:00:00 GMT" in
+  let headers = Header.of_list [("If-Match", "*");
+                                ("If-None-Match", "*");
+                                ("If-Unmodified-Since", five_pm);
+                                ("Content-Type", "text/plain")] in
+  let result = with_test_resource' begin fun resource ->
+    resource#set_last_modified (Some ten_am);
+    resource#set_allowed_methods default_allowed_methods;
+    Request.make ~headers ~meth:`PUT Uri.(of_string "/"), `String "foo"
+  end in
+  assert_path ~msg:"412 result via J18 via I13 via I12 via H12" result Path.to_j18_no_acpthead_3;
+  assert_status ~msg:"412 result via J18 via I13 via I12 via H12" result 412;
+;;
 
 let content_valid () =
   let headers = Header.of_list [("Content-Type", "text/plain")] in
@@ -824,21 +835,16 @@ content_md5_custom_inval_b9a() ->
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
 
-%% 401 result via B8
-authorized_b8() ->
-    put_setting(is_authorized, "Basic"),
-    put_setting(allowed_methods, ['GET']),
-    {ok, Result} = httpc:request(get, {url("foo"), []}, [], []),
-    {{Protocol, Code, Status}, Headers, _} = Result,
-    ?assertEqual("HTTP/1.1", Protocol),
-    ?assertEqual(401, Code),
-    ?assertEqual("Unauthorized", Status),
-    ?assertEqual({"www-authenticate", "Basic"}, lists:keyfind("www-authenticate", 1, Headers)),
-    ExpectedDecisionTrace = ?PATH_TO_B8,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
-
 *)
+let authorized_b8 () =
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_is_authorized (`Basic "basic");
+    Request.make ~meth:`GET Uri.(of_string "/authorisedfoo")
+  end in
+  assert_path ~msg:"401 result via B9" result Path.to_b8;
+  assert_status ~msg:"401 result via B8" result 401;
+;;
 
 let forbidden_b7 () =
   let result = with_test_resource begin fun resource ->
@@ -998,19 +1004,22 @@ not_modified_j18_via_h12() ->
     ExpectedDecisionTrace = ?PATH_TO_J18_NO_ACPTHEAD_3,
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
+*)
 
-%% 304 result via L17
-not_modified_l17() ->
-    put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
-    put_setting(last_modified, ?FIRST_DAY_OF_LAST_YEAR),
-    put_setting(expires, ?FIRST_DAY_OF_NEXT_YEAR),
-    RFC1123LastYear = httpd_util:rfc1123_date(?FIRST_DAY_OF_LAST_YEAR),
-    Headers = [{"If-Modified-Since", RFC1123LastYear}],
-    {ok, Result} = httpc:request(get, {url(), Headers}, [], []),
-    ?assertMatch({{"HTTP/1.1", 304, "Not Modified"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_L17_NO_ACPTHEAD,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
+let not_modified_l17 () =
+  let first_day_of_last_year = "Tue, 01 Jan 2015 00:00:00 GMT" in
+  let first_day_of_next_year = "Sun, 01 Jan 2017 00:00:00 GMT" in
+  let headers = Header.of_list [("If-Modified-Since", first_day_of_last_year)] in
+  let result = with_test_resource begin fun resource ->
+    resource#set_last_modified (Some first_day_of_last_year);
+    resource#set_expires (Some first_day_of_next_year);
+    Request.make ~headers ~meth:`GET Uri.(of_string "/foo");
+  end in
+  assert_path ~msg:"304 via l17" result Path.to_l17_no_acpthead;
+  assert_status ~msg:"304 via l17" result 304;
+;;
+
+(*
 
 %% 303 result via N11 using request data rewriting
 see_other_n11() ->
@@ -1440,14 +1449,18 @@ let _ =
     "not_acceptable_f7_e6_d5_c4" >:: not_acceptable_f7_e6_d5_c4;
     "precond_fail_no_resource" >:: precond_fail_no_resource;
     "precond_fail_g11" >:: precond_fail_g11;
-    (* "precond_fail_h12" >:: precond_fail_h12; *)
+    "precond_fail_h12" >:: precond_fail_h12;
     "precond_fail_j18" >:: precond_fail_j18;
+    "precond_fail_j18_via_k13" >:: precond_fail_j18_via_k13;
+    "precond_fail_j18_via_h12" >:: precond_fail_j18_via_h12;
     "content_valid" >:: content_valid;
+    "authorized_b8" >:: authorized_b8;
     "forbidden_b7" >:: forbidden_b7;
     "options_b3" >:: options_b3;
     "variances_o18" >:: variances_o18;
     "variances_o18_2" >:: variances_o18_2;
     "multiple_choices_o18" >:: multiple_choices_o18;
+    "not_modified_l17" >:: not_modified_l17;
     "create_p11_put" >:: create_p11_put
   ] in
   let suite = (Printf.sprintf "test logic") >::: tests in

@@ -23,7 +23,7 @@ Library webmachine
   Path:             lib
   InternalModules:  Wm_util
   Modules:          Webmachine
-  BuildDepends:     cohttp (>= 0.12.0), dispatch (>= 0.3.0), re (>= 1.3.0), re.str
+  BuildDepends:     cohttp (>= 0.12.0), dispatch (>= 0.3.0), re (>= 1.3.0), re.str, calendar (>= 2.03.2)
 
 Document webmachine
   Title:                webmachine docs
@@ -63,7 +63,7 @@ Executable test_logic
   Build$:           flag(tests)
   CompiledObject:   best
   Install:          false
-  BuildDepends:     webmachine, cohttp, oUnit (>= 1.0.2)
+  BuildDepends:     webmachine, cohttp, oUnit (>= 1.0.2), calendar
 
 Executable test_dispatch
   Path:             lib_test
@@ -71,7 +71,7 @@ Executable test_dispatch
   Build$:           flag(tests)
   CompiledObject:   best
   Install:          false
-  BuildDepends:     webmachine, cohttp, oUnit (>= 1.0.2)
+  BuildDepends:     webmachine, cohttp, oUnit (>= 1.0.2), calendar
 
 Test test_logic
   Run$:             flag(tests)

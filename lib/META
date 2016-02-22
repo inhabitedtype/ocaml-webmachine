@@ -2,7 +2,7 @@
 # DO NOT EDIT (digest: f84d298794c839217704aa7fae6c5950)
 version = "0.3.1"
 description = "A REST toolkit for OCaml"
-requires = "cohttp dispatch re re.str"
+requires = "cohttp dispatch re re.str calendar"
 archive(byte) = "webmachine.cma"
 archive(byte, plugin) = "webmachine.cma"
 archive(native) = "webmachine.cmxa"

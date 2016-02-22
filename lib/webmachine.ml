@@ -669,11 +669,28 @@ module Make(IO:IO) = struct
 
     method v3h11 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3h11";
-      failwith "NYI: v3h11"
+      let d = self#get_request_header "if-unmodified-since" in
+      match d with
+      | None -> self#v3i12
+      | Some d' ->
+         match (Util.Date.parse_rfc1123_date d') with
+         | None -> self#v3i12
+         | Some _ -> self#v3h12
 
     method v3h12 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3h12";
-      failwith "NYI: v3h12"
+      try
+        let u_mod = self#get_request_header "if-unmodified-since" in
+        self#run_op resource#last_modified
+        >>~ fun l_mod ->
+        match (u_mod, l_mod) with
+        | (Some u_mod', Some l_mod') ->
+           (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
+           | false -> self#v3i12
+           | true -> self#halt 412)
+        | (_, _) -> self#v3i12
+      with
+        Invalid_argument _ -> self#halt 412
 
     method v3i4 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3i4";
@@ -758,7 +775,39 @@ module Make(IO:IO) = struct
 
     method v3l14 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3l14";
-      failwith "NYI: v3l14"
+      match (self#get_request_header "if-modified-since") with
+      | None -> self#v3m16
+      | Some date ->
+         match (Util.Date.parse_rfc1123_date date) with
+         | Some _ -> self#v3l15
+         | None ->  self#v3m16
+
+    method v3l15 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3l15";
+      let now = CalendarLib.Time.now() in
+      match (self#get_request_header "if-modified-since") with
+      | None -> self#v3l17
+      | Some date ->
+         match (Util.Date.parse_rfc1123_date date) with
+         | None -> self#v3l17
+         | Some d -> match (d > now) with
+                     | true -> self#v3m16
+                     | false -> self#v3l17
+
+    method v3l17 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3l17";
+      try
+        let u_mod = self#get_request_header "if-modified-since" in
+        self#run_op resource#last_modified
+        >>~ fun l_mod ->
+            match (u_mod, l_mod) with
+            | (Some l_mod', Some u_mod') ->
+               (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
+                | true -> self#v3m16
+                | false -> self#halt 304)
+            | (_, _) -> self#halt 304
+      with
+        Invalid_argument _ -> self#halt 304
 
     method v3j18 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3j18";
