@@ -706,10 +706,12 @@ let precond_fail_g11 () =
 ;;
 
 let precond_fail_h12 () =
-  let headers = Header.of_list [("Last-Modified", "Wed, 20 Feb 2013 10:00:00 GMT");
-                                 ("If-Unmodified-Since", "Wed, 20 Feb 2013 17:00:00 GMT")] in
+  let ten_am = "Wed, 20 Feb 2013 10:00:00 GMT" in
+  let five_pm = "Wed, 20 Feb 2013 17:00:00 GMT" in
+  let headers = Header.of_list [("If-Unmodified-Since", ten_am)] in
   let result = with_test_resource' begin fun resource ->
     resource#set_allowed_methods default_allowed_methods;
+    resource#set_last_modified (Some five_pm);
     Request.make ~headers ~meth:`GET Uri.(of_string "/"), `String "foo"
   end in
   assert_path ~msg:"412 result via h12, i13, i12, h10, h11" result Path.to_h12_no_acpthead;

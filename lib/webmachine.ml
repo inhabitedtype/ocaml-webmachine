@@ -681,9 +681,10 @@ module Make(IO:IO) = struct
       self#d "v3h12";
       try
         let u_mod = self#get_request_header "if-unmodified-since" in
-        let l_mod = self#get_request_header "last-modified" in
+        self#run_op resource#last_modified
+        >>~ fun l_mod ->
         match (u_mod, l_mod) with
-        | (Some l_mod', Some u_mod') ->
+        | (Some u_mod', Some l_mod') ->
            (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
            | false -> self#v3i12
            | true -> self#halt 412)
@@ -797,13 +798,14 @@ module Make(IO:IO) = struct
       self#d "v3l17";
       try
         let u_mod = self#get_request_header "if-modified-since" in
-        let l_mod = self#get_response_header "last-modified" in
-        match (u_mod, l_mod) with
-        | (Some l_mod', Some u_mod') ->
-           (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
-           | true -> self#v3m16
-           | false -> self#halt 304)
-        | (_, _) -> self#halt 304
+        self#run_op resource#last_modified
+        >>~ fun l_mod ->
+            match (u_mod, l_mod) with
+            | (Some l_mod', Some u_mod') ->
+               (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
+                | true -> self#v3m16
+                | false -> self#halt 304)
+            | (_, _) -> self#halt 304
       with
         Invalid_argument _ -> self#halt 304
 
