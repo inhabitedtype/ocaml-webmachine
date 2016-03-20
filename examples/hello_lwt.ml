@@ -28,7 +28,7 @@ class hello = object(self)
    *
    *   https://tools.ietf.org/html/rfc7231#section-5.3.2
    *
-   * Content negotiation can be a complex process. Hoever for simple Accept
+   * Content negotiation can be a complex process. However for simple Accept
    * headers its fairly straightforward. Here's what content negotiation will
    * produce in some of these simple cases:
    *
