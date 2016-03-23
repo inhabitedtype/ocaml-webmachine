@@ -71,8 +71,8 @@ module Db = struct
     with_db db ~f:(fun l ->
       let l' = List.map (fun (id', e') ->
         if id' = id
-          then begin found := true; (id', e') end
-          else (id', e))
+          then begin found := true; (id', e) end
+          else (id', e'))
         l
       in
       (!found, l'))
