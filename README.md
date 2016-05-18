@@ -20,31 +20,6 @@ Install the library and its depenencies via [OPAM][opam]:
 opam install webmachine
 ```
 
-## Development
-
-To install development versions of the library, pin the package from the root
-of the repository:
-
-```bash
-opam pin add .
-```
-
-You can install the latest changes by commiting them to the local git
-repository and running:
-
-```bash
-opam upgrade webmachine
-```
-
-For building and running the tests during development, you will need to install
-the `oUnit` package and reconfigure the build process to enable tests:
-
-```bash
-opam install oUnit
-./configure --enable-tests
-make && make test
-```
-
 ## Getting Started
 
 webmachine implements [this decision diagram][diagram] to determine how an HTTP
@@ -65,6 +40,29 @@ make clean && make
 ```
 
 [diagram]: https://raw.githubusercontent.com/webmachine/webmachine/develop/docs/http-headers-status-v3.png
+
+
+## Development
+
+To install development dependencies, pin the package from the root of the
+repository:
+
+```bash
+opam pin add -n webmachine .
+opam install --deps-only webmachine
+```
+
+After this, you may install a development version of the library using the
+install command as usual.
+
+For building and running the tests during development, you will need to install
+the `oUnit` package and reconfigure the build process to enable tests:
+
+```bash
+opam install oUnit
+./configure --enable-tests
+make && make test
+```
 
 ## License
 
