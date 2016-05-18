@@ -20,21 +20,28 @@ Install the library and its depenencies via [OPAM][opam]:
 opam install webmachine
 ```
 
+## Getting Started
+
+webmachine implements [this decision diagram][diagram] to determine how an HTTP
+request should be handled. This includes validation, authentication, content
+negotiation, and caching. A resource specifies the decision that should be made
+at each node in the diagram by defining the appropriate method in a `resource`
+subclass. The correspondence is suggested by the name of the method for now.
+This will be better-documented in the future.
+
+
 ## Development
 
-To install development versions of the library, pin the package from the root
-of the repository:
+To install development dependencies, pin the package from the root of the
+repository:
 
 ```bash
-opam pin add .
+opam pin add -n webmachine .
+opam install --deps-only webmachine
 ```
 
-You can install the latest changes by commiting them to the local git
-repository and running:
-
-```bash
-opam upgrade webmachine
-```
+After this, you may install a development version of the library using the
+install command as usual.
 
 For building and running the tests during development, you will need to install
 the `oUnit` package and reconfigure the build process to enable tests:
@@ -44,15 +51,6 @@ opam install oUnit
 ./configure --enable-tests
 make && make test
 ```
-
-## Getting Started
-
-webmachine implements [this decision diagram][diagram] to determine how an HTTP
-request should be handled. This includes validation, authentication, content
-negotiation, and caching. A resource specifies the decision that should be made
-at each node in the diagram by defining the appropriate method in a `resource`
-subclass. The correspondence is suggested by the name of the method for now.
-This will be better-documented in the future.
 
 ### Examples
 
