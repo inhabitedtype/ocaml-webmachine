@@ -476,7 +476,7 @@ module Make(IO:IO) = struct
       >>~ function
         | `Authorized -> self#v3b7
         | `Basic realm ->
-          self#set_response_header "www-authenticate" realm;
+          self#set_response_header "WWW-Authenticate" ("Basic realm=\"" ^ realm ^ "\"");
           self#halt 401
         | `Redirect uri ->
           rd <- Rd.redirect Uri.(to_string uri) rd;
