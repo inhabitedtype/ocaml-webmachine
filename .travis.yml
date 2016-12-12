@@ -3,5 +3,6 @@ install: wget https://raw.githubusercontent.com/ocaml/ocaml-travisci-skeleton/ma
 script: bash -ex .travis-opam.sh
 sudo: required
 env:
+  - OCAML_VERSION=4.03 PACKAGE=webmachine
   - OCAML_VERSION=4.02 PACKAGE=webmachine
   - OCAML_VERSION=4.01 PACKAGE=webmachine
