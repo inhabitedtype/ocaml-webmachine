@@ -51,7 +51,7 @@ class hello = object(self)
   (* Since only GET requests are allowed, there's no need to provide handlers
    * for requests containing certain content types. This method will never be
    * called, but it's necessary to provide an implementation since it's
-   * [virtual] in the [Wm.resouce] virutal class. *)
+   * [virtual] in the [Wm.resource] virtual class. *)
   method content_types_accepted rd =
     Wm.continue [] rd
 
