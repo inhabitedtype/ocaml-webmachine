@@ -14,7 +14,7 @@ module Wm = struct
 end
 
 (* Create a new class that inherits from [Wm.resource] and provides
- * implementations for its two virutal methods, and overrides some of its default methods.
+ * implementations for its two virtual methods, and overrides some of its default methods.
  *)
 class hello = object(self)
   inherit [Body.t] Wm.resource
@@ -51,7 +51,7 @@ class hello = object(self)
   (* Since only GET requests are allowed, there's no need to provide handlers
    * for requests containing certain content types. This method will never be
    * called, but it's necessary to provide an implementation since it's
-   * [virtual] in the [Wm.resouce] virutal class. *)
+   * [virtual] in the [Wm.resource] virtual class. *)
   method content_types_accepted rd =
     Wm.continue [] rd
 
