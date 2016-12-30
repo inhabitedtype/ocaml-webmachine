@@ -31,7 +31,7 @@ This will be better-documented in the future.
 
 ### Examples
 
-To build the examples in the `examples/` subdirectory, reconfigure the build
+To build the examples in the [`examples/`][examples_dir] subdirectory, reconfigure the build
 process and recompile:
 
 ```bash
@@ -40,7 +40,7 @@ make clean && make
 ```
 
 [diagram]: https://raw.githubusercontent.com/webmachine/webmachine/develop/docs/http-headers-status-v3.png
-
+[examples_dir]: examples/
 
 ## Development
 
