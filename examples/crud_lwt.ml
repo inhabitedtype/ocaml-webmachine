@@ -16,7 +16,7 @@
 
       [DEBUG_PATH= ./crud_lwt.native]
 
-    Here are some sample CURL command to test on a running server:
+    Here are some sample CURL commands to test on a running server:
 
       - Get a complete list of items:
         [curl -i -w "\n" -X GET http://localhost:8080/items]
@@ -192,7 +192,7 @@ let main () =
     ("/items", fun () -> new items db) ;
     ("/item/:id", fun () -> new item db) ;
   ] in
-  let callback (ch,conn) request body =
+  let callback (ch, conn) request body =
     let open Cohttp in
     (* Perform route dispatch. If [None] is returned, then the URI path did not
      * match any of the route patterns. In this case the server should return a
@@ -224,7 +224,7 @@ let main () =
       Server.respond ~headers ~body ~status ()
   in
   (* create the server and handle requests with the function defined above *)
-  let conn_closed (ch,conn) =
+  let conn_closed (ch, conn) =
     Printf.printf "connection %s closed\n%!"
       (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
   in
