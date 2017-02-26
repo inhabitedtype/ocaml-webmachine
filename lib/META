@@ -1,8 +1,8 @@
 # OASIS_START
-# DO NOT EDIT (digest: 98631def5c814d451ddd0cbc32a406f6)
+# DO NOT EDIT (digest: fb5e7ddfe88d8c1fc4c8a6c5717c4d42)
 version = "dev"
 description = "A REST toolkit for OCaml"
-requires = "calendar cohttp dispatch re re.str"
+requires = "calendar cohttp dispatch re re.str uri"
 archive(byte) = "webmachine.cma"
 archive(byte, plugin) = "webmachine.cma"
 archive(native) = "webmachine.cmxa"
