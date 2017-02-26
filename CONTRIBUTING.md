@@ -16,13 +16,13 @@ The goals of this project are the following:
 
 The best way to get a pull request accepted is for it to directly serve the
 goals of the project, while being simple and straightforward for project
-maintainers to evalute its functionality and maintainability. In service to the
-these criteria, pull request and commit messages should clearly describe what
-they include and why. Generally speaking, follow the guidelines of [this blog
-post][commit-msg] when composing commit messages. Pull requests should pass
-existing tests and include additional tests when appropriate. The code should
-be clear rather than clever (two-liners over one-liners), and documented when
-the code can't speak for itself.
+maintainers to evalute it in terms of functionality and maintainability. In
+service to the these criteria, pull request and commit messages should clearly
+describe what they include and why. Generally speaking, follow the guidelines
+of [this blog post][commit-msg] when composing commit messages. Pull requests
+should pass existing tests and include additional tests when appropriate. The
+code should be clear rather than clever (two-liners over one-liners), and
+documented when the code can't speak for itself.
 
 [process]: https://twitter.com/davecheney/status/676645735647940608
 
@@ -41,6 +41,13 @@ issue. To quote a tweet:
 
 &mdash; [Dave Cheney][process]
 
+## Releases
+
+Releases will be prepared and performed by maintainers. Please do not include
+any changes related to release management in your contributions. This inlcudes,
+but is not limited to, changing the version of the package in the `_oasis` and
+`opam` files.
+
 ## Whitespace
 
 Two space indentation. No tabs. No trailing whitespace. If you find any
@@ -58,8 +65,7 @@ build/release process:
 
 1. Modify the [`_oasis`][oasis] file to reflect changed dependencies;
 2. Run `oasis setup` to regenerate files used in the build process; and
-3. Run `oasis2opam --local` to regenerate the opam file used when publishing
-   releases to [OPAM][OPAM].
+3. Update `opam/opam` to reflect the changes made in the `_oasis` file.
 
 Try to include these changes in a separate commit. That's not always possible,
-so don't sweat it too much.
+so don't sweat it too much if you can't.
