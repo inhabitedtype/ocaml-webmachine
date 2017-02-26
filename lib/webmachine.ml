@@ -62,7 +62,7 @@ module Rd = struct
       ?(resp_headers=Header.init ()) ?(resp_body=`Empty) ?(resp_redirect=false)
       ?(req_body=`Empty) ~request ()
     =
-    { uri     = request.Request.uri
+    { uri     = Uri.of_string request.Request.resource
     ; version = request.Request.version
     ; meth    = request.Request.meth
     ; req_headers = request.Request.headers
