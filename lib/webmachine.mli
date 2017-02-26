@@ -63,7 +63,7 @@ module Rd : sig
   type 'body t =
     { version       : Code.version
     ; meth          : Code.meth
-    ; uri           : Uri.t
+    ; resource      : string
     ; req_headers   : Header.t
     ; req_body      : 'body
     ; resp_headers  : Header.t

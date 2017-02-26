@@ -1,6 +1,6 @@
 opam-version: "1.2"
 name: "webmachine"
-version: "0.3.1"
+version: "0.3.3"
 maintainer: "Spiros Eliopoulos <spiros@inhabitedtype.com>"
 authors: [ "Spiros Eliopoulos <spiros@inhabitedtype.com>" ]
 license: "BSD-3-clause"
@@ -23,7 +23,7 @@ build-test: [
 build-doc: [ "ocaml" "setup.ml" "-doc" ]
 depends: [
   "calendar" {>= "2.03.2"}
-  "cohttp" {>= "0.12.0" & < "0.21.0"}
+  "cohttp" {>= "0.21.0"}
   "dispatch" {>= "0.3.0"}
   "ocamlfind" {build}
   "ounit" {test & >= "1.0.2"}
