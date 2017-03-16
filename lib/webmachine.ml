@@ -407,12 +407,12 @@ module Make(IO:IO) = struct
     method private accept_helper k =
       let header =
         match self#get_request_header "content-type" with
-        | None       -> Some "application/octet-stream"
-        | Some type_ -> Some type_
+        | None       -> "application/octet-stream"
+        | Some type_ -> type_
       in
       self#run_op resource#content_types_accepted
       >>~ fun provided ->
-        match Util.MediaType.match_header provided header with
+        match Util.MediaType.match_provided_header provided header with
         | None                -> self#halt 415
         | Some(_, of_content) ->
           self#run_op of_content
@@ -539,7 +539,7 @@ module Make(IO:IO) = struct
       self#run_op resource#content_types_provided
       >>~ fun content_types ->
         let header = self#get_request_header "accept" in
-        match Util.MediaType.match_header content_types header with
+        match Util.MediaType.match_accept_header content_types header with
         | None   -> self#halt 406
         | Some t ->
           content_type <- Some t;
