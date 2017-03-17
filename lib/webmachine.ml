@@ -103,9 +103,13 @@ module type S = sig
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
+  type www_authenticate =
+    { scheme : string; realm : string; params : (string * string) list }
+
   type auth =
     [ `Authorized
     | `Basic of string
+    | `Challenge of www_authenticate
     | `Redirect of Uri.t
     ]
 
@@ -180,9 +184,13 @@ module Make(IO:IO) = struct
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
+  type www_authenticate =
+    { scheme : string; realm : string; params : (string * string) list }
+
   type auth =
     [ `Authorized
     | `Basic of string
+    | `Challenge of www_authenticate
     | `Redirect of Uri.t
     ]
 
@@ -477,6 +485,12 @@ module Make(IO:IO) = struct
         | `Authorized -> self#v3b7
         | `Basic realm ->
           self#set_response_header "WWW-Authenticate" ("Basic realm=\"" ^ realm ^ "\"");
+          self#halt 401
+        | `Challenge auth ->
+          self#set_response_header "WWW-Authenticate" (String.concat " " (
+              auth.scheme ::
+              ("realm=\"" ^ auth.realm ^ "\"") ::
+              (List.map (fun (k, v) -> k ^ "=\"" ^ v ^ "\"") auth.params)));
           self#halt 401
         | `Redirect uri ->
           rd <- Rd.redirect Uri.(to_string uri) rd;
