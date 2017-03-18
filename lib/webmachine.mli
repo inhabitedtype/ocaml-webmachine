@@ -122,7 +122,7 @@ module type S = sig
   type auth =
     [ `Authorized
     | `Basic of string
-    | `Challenge of www_authenticate
+    | `Unauthorized of www_authenticate
     | `Redirect of Uri.t
     ]
 

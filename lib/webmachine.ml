@@ -109,7 +109,7 @@ module type S = sig
   type auth =
     [ `Authorized
     | `Basic of string
-    | `Challenge of www_authenticate
+    | `Unauthorized of www_authenticate
     | `Redirect of Uri.t
     ]
 
@@ -190,7 +190,7 @@ module Make(IO:IO) = struct
   type auth =
     [ `Authorized
     | `Basic of string
-    | `Challenge of www_authenticate
+    | `Unauthorized of www_authenticate
     | `Redirect of Uri.t
     ]
 
@@ -486,7 +486,7 @@ module Make(IO:IO) = struct
         | `Basic realm ->
           self#set_response_header "WWW-Authenticate" ("Basic realm=\"" ^ realm ^ "\"");
           self#halt 401
-        | `Challenge auth ->
+        | `Unauthorized auth ->
           self#set_response_header "WWW-Authenticate" (String.concat " " (
               auth.scheme ::
               ("realm=\"" ^ auth.realm ^ "\"") ::
