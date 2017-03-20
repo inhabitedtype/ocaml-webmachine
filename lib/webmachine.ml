@@ -487,10 +487,21 @@ module Make(IO:IO) = struct
           self#set_response_header "WWW-Authenticate" ("Basic realm=\"" ^ realm ^ "\"");
           self#halt 401
         | `Challenge auth ->
-          self#set_response_header "WWW-Authenticate" (String.concat " " (
-              auth.scheme ::
-              ("realm=\"" ^ auth.realm ^ "\"") ::
-              (List.map (fun (k, v) -> k ^ "=\"" ^ v ^ "\"") auth.params)));
+          let challenge =
+            let buffer = Buffer.create 80 in
+            let add_kv (k, v) =
+              Buffer.add_char buffer ' ';
+              Buffer.add_string buffer k;
+              Buffer.add_string buffer "=\"";
+              Buffer.add_string buffer v;
+              Buffer.add_string buffer "\"";
+            in
+            Buffer.add_string buffer auth.scheme;
+            add_kv ("realm", auth.realm);
+            List.iter add_kv auth.params;
+            Buffer.contents buffer
+          in
+          self#set_response_header "WWW-Authenticate" challenge;
           self#halt 401
         | `Redirect uri ->
           rd <- Rd.redirect Uri.(to_string uri) rd;
