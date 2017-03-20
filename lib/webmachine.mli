@@ -116,9 +116,13 @@ module type S = sig
   type 'body provider = ('body, 'body) op
   type 'body acceptor = (bool, 'body) op
 
+  type www_authenticate =
+    { scheme : string; realm : string; params : (string * string) list }
+
   type auth =
     [ `Authorized
     | `Basic of string
+    | `Challenge of www_authenticate
     | `Redirect of Uri.t
     ]
 
