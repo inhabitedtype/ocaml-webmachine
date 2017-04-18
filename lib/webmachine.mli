@@ -138,6 +138,7 @@ module type S = sig
 
     method virtual content_types_provided : ((string * ('body provider)) list, 'body) op
     method virtual content_types_accepted : ((string * ('body acceptor)) list, 'body) op
+    method virtual patch_content_types_accepted : ((string * ('body acceptor)) list, 'body) op
 
     method resource_exists : (bool, 'body) op
     (** Returning [false] will result in a [404 Not Found].

@@ -122,6 +122,8 @@ module type S = sig
     method virtual content_types_provided : ((string * ('body provider)) list, 'body) op
     method virtual content_types_accepted : ((string * ('body acceptor)) list, 'body) op
 
+    method virtual patch_content_types_accepted : ((string * ('body acceptor)) list, 'body) op
+
     method resource_exists : (bool, 'body) op
     method service_available : (bool, 'body) op
     method is_authorized : (auth, 'body) op
@@ -214,6 +216,8 @@ module Make(IO:IO) = struct
 
     method virtual content_types_provided : ((string * ('body provider)) list, 'body) op
     method virtual content_types_accepted : ((string * ('body acceptor)) list, 'body) op
+
+    method virtual patch_content_types_accepted : ((string * ('body acceptor)) list, 'body) op
 
     method resource_exists (rd:'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue true rd
@@ -419,6 +423,23 @@ module Make(IO:IO) = struct
         | Some type_ -> Some type_
       in
       self#run_op resource#content_types_accepted
+      >>~ fun provided ->
+        match Util.MediaType.match_header provided header with
+        | None                -> self#halt 415
+        | Some(_, of_content) ->
+          self#run_op of_content
+          >>~ function complete ->
+            if complete then
+              self#encode_body;
+            k complete
+
+    method private patch_accept_helper k =
+      let header =
+        match self#get_request_header "content-type" with
+        | None       -> Some "application/octet-stream"
+        | Some type_ -> Some type_
+      in
+      self#run_op resource#patch_content_types_accepted
       >>~ fun provided ->
         match Util.MediaType.match_header provided header with
         | None                -> self#halt 415
@@ -892,8 +913,15 @@ module Make(IO:IO) = struct
       self#d "v3o16";
       match self#meth with
       | `OPTIONS | `DELETE | `POST -> assert false
-      | `PUT -> self#v3o14
-      | _    -> self#v3o18
+      | `PUT   -> self#v3o14
+      | `PATCH -> self#v3o17
+      | _      -> self#v3o18
+
+    method v3o17 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3o17";
+      match self#meth with
+      | `PATCH -> self#patch_accept_helper (fun _ -> self#v3o20)
+      | _ -> self#v3o18
 
     method v3o18 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3o18";
