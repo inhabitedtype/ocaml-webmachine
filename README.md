@@ -5,7 +5,7 @@ state-machine-based HTTP request processor. It's particularly well-suited for
 writing RESTful APIs. As the name suggests, this is an OCaml port of the
 [webmachine][] project.
 
-[cohttp]: https://github.com/mirage/ocaml-webmachine
+[cohttp]: https://github.com/mirage/ocaml-cohttp
 [webmachine]: https://github.com/webmachine/webmachine
 
 [![Build Status](https://travis-ci.org/inhabitedtype/ocaml-webmachine.svg?branch=master)](https://travis-ci.org/inhabitedtype/ocaml-webmachine)
