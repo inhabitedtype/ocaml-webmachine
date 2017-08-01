@@ -1,0 +1,12 @@
+(jbuild_version 1)
+
+(executables
+ ((libraries (webmachine ounit))
+  (modules (test_dispatch test_logic))
+  (names (test_dispatch test_logic))))
+
+(alias
+ ((name runtest)
+  (package webmachine)
+  (deps (test_dispatch.exe test_logic.exe))
+  (action (run ${<}))))

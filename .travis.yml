@@ -1,7 +1,13 @@
 language: c
-install: wget https://raw.githubusercontent.com/ocaml/ocaml-travisci-skeleton/master/.travis-opam.sh
-script: bash -ex .travis-opam.sh
-sudo: required
+sudo: false
+services:
+ - docker
+install: wget https://raw.githubusercontent.com/ocaml/ocaml-travisci-skeleton/master/.travis-docker.sh
+script: bash -ex ./.travis-docker.sh
 env:
-  - OCAML_VERSION=4.03 PACKAGE=webmachine
-  - OCAML_VERSION=4.02 PACKAGE=webmachine
+  global:
+  - PINS="webmachine."
+  matrix:
+  - PACKAGE="webmachine" DISTRO="ubuntu-16.04" OCAML_VERSION="4.04.2"
+  - PACKAGE="webmachine" DISTRO="alpine-3.5" OCAML_VERSION="4.03.0"
+  - PACKAGE="webmachine" DISTRO="debian-unstable" OCAML_VERSION="4.03.0"
