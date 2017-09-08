@@ -2,7 +2,6 @@ open Core.Std
 open Async.Std
 
 open Cohttp_async
-open Cohttp_async_io
 
 (* Apply the [Webmachine.Make] functor to the Async-based IO module exported by
  * cohttp. For added convenience, include the [Rd] module as well so you don't
@@ -10,7 +9,7 @@ open Cohttp_async_io
  * information. *)
 module Wm = struct
   module Rd = Webmachine.Rd
-  include Webmachine.Make(Cohttp_async_io)
+  include Webmachine.Make(Cohttp_async.Io)
 end
 
 (* Create a new class that inherits from [Wm.resource] and provides
