@@ -1,7 +1,7 @@
 (jbuild_version 1)
 
 (executables
- ((libraries (webmachine ounit))
+ ((libraries (webmachine oUnit))
   (modules (test_dispatch test_logic))
   (names (test_dispatch test_logic))))
 
