@@ -1,0 +1,6 @@
+(jbuild_version 1)
+
+(executables
+ ((libraries (webmachine lwt cohttp conduit-lwt-unix))
+  (modules (crud_lwt hello_async hello_lwt))
+  (names (crud_lwt hello_async hello_lwt))))
