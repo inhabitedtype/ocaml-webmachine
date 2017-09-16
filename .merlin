@@ -1,4 +1,0 @@
-S lib
-B _build/**
-PKG cohttp
-PKG dispatch

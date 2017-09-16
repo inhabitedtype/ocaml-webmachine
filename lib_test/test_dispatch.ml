@@ -30,6 +30,7 @@
     ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
+[@@@ocaml.warning "-7"]
 
 module Id = struct
   type +'a t = Id of 'a
@@ -44,7 +45,6 @@ module Webmachine = struct
   include Webmachine.Make(Id)
 end
 
-open Id
 let run = Id.run
 
 class base_path str = object

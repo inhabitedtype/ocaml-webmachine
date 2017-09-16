@@ -69,7 +69,7 @@ let choose (choices : (string * _) list) (accepted : (int * string) list) (defau
         None
     | _, (0, x)::xs ->
       loop (List.filter (fun (y, _) -> x <> y) choices) xs
-    | _, (p, x)::xs ->
+    | _, (_, x)::xs ->
       try Some(x, List.assoc x choices) with Not_found -> loop choices xs
   in
   loop choices accepted

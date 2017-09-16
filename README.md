@@ -60,8 +60,7 @@ the `oUnit` package and reconfigure the build process to enable tests:
 
 ```bash
 opam install oUnit
-./configure --enable-tests
-make && make test
+jbuilder runtest
 ```
 
 ## License
