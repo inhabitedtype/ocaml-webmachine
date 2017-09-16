@@ -6,7 +6,13 @@
   (names (test_dispatch test_logic))))
 
 (alias
- ((name runtest)
+ ((name    runtest)
   (package webmachine)
-  (deps (test_dispatch.exe test_logic.exe))
-  (action (run ${<}))))
+  (deps    (test_dispatch.exe))
+  (action  (run ${<}))))
+
+(alias
+ ((name    runtest)
+  (package webmachine)
+  (deps    (test_logic.exe))
+  (action  (run ${<}))))
