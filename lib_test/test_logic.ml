@@ -30,6 +30,7 @@
     ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
+[@@@ocaml.warning "-7"]
 
 module Id = struct
   type +'a t = Id of 'a
@@ -42,9 +43,7 @@ end
 
 module Webmachine = struct
   module Rd = Webmachine.Rd
-
   include Webmachine.Make(Id)
-
 end
 
 (* TODO pull in from wm_util.ml rather than copy pasta *)
@@ -59,8 +58,6 @@ module Date = struct
     | Invalid_argument _ -> None
 end
 
-
-open Id
 let run = Id.run
 
 open Cohttp
