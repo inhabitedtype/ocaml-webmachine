@@ -94,28 +94,51 @@ module MediaType = struct
   let compare_q (q1,_) (q2,_) =
     compare q1 q2
 
-  let media_match (_, (range, _)) (type_, _) =
-    let type_, subtype =
-      match Re_str.(split (regexp "/") type_) with
+  let type_of_string str =
+    match Re_str.(split (regexp "/") str) with
       | [x; y] -> x, y
       | _      -> assert false
-    in
+          (* FIXME: raise an exception to respond Invalid request to client ? *)
+
+  let type_in_range (type_,subtype) range =
     let open Accept in
     match range with
     | AnyMedia                    -> true
     | AnyMediaSubtype type_'       -> type_' = type_
     | MediaType (type_', subtype') -> type_' = type_ && subtype' = subtype
 
-  let match_header provided header =
+  let media_match range (type_, _) =
+    let type_ = type_of_string type_ in
+    type_in_range type_ range
+
+  let match_accept_header provided header =
     (* sort in descending order of quality *)
     let ranges = List.sort (fun (q1, _) (q2, _) -> compare q2 q1)
       Accept.(media_ranges header)
     in
     let rec loop = function
       | [] -> None
-      | r::rs -> try Some(List.find (media_match r) provided) with Not_found -> loop rs
+      | (_,(range,_))::rs ->
+        try Some(List.find (media_match range) provided)
+        with Not_found -> loop rs
     in
     loop ranges
+
+  let match_provided_header accepted header =
+    let accepted_ranges =
+      (* keep order with fold_right *)
+      List.fold_right
+        (fun (str,f) acc ->
+           match Accept.media_ranges (Some str) with
+             [] -> acc
+           | (_,(range,_)) :: _ -> (range, f) :: acc)
+           accepted []
+    in
+    (* content type provided by client is unique *)
+    let header_type = type_of_string header in
+    let predicate (range,_) = type_in_range header_type range in
+    try Some (List.find predicate accepted_ranges)
+    with Not_found -> None
 end
 
 module Date = struct
