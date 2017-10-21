@@ -38,7 +38,7 @@ let re_split_ws =
 ;;
 
 let choose (choices : (string * _) list) (accepted : (int * string) list) (default:string) =
-  let any_prio = List.filter (fun (_, c) -> c = "*") accepted in
+  let any_prio     = List.filter (fun (_, c) -> c = "*"    ) accepted in
   let default_prio = List.filter (fun (_, c) -> c = default) accepted in
   let default_ok =
     match default_prio with
@@ -52,9 +52,8 @@ let choose (choices : (string * _) list) (accepted : (int * string) list) (defau
   in
   let any_ok =
     match any_prio with
-    | []  -> false
-    | [0, _] -> false
-    | _   -> true
+    | [] | [0, _] -> false
+    | _           -> true
   in
   let rec loop choices accepted =
     match choices, accepted with
@@ -91,9 +90,6 @@ end
 module MediaType = struct
   open Cohttp
 
-  let compare_q (q1,_) (q2,_) =
-    compare q1 q2
-
   let media_match (_, (range, _)) (type_, _) =
     let type_, subtype =
       match Re_str.(split (regexp "/") type_) with
@@ -102,15 +98,12 @@ module MediaType = struct
     in
     let open Accept in
     match range with
-    | AnyMedia                    -> true
+    | AnyMedia                     -> true
     | AnyMediaSubtype type_'       -> type_' = type_
     | MediaType (type_', subtype') -> type_' = type_ && subtype' = subtype
 
   let match_header provided header =
-    (* sort in descending order of quality *)
-    let ranges = List.sort (fun (q1, _) (q2, _) -> compare q2 q1)
-      Accept.(media_ranges header)
-    in
+    let ranges = Accept.(media_ranges header |> qsort) in
     let rec loop = function
       | [] -> None
       | r::rs -> try Some(List.find (media_match r) provided) with Not_found -> loop rs
