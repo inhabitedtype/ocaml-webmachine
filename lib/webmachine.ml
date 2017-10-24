@@ -698,9 +698,8 @@ module Make(IO:IO) = struct
       match d with
       | None -> self#v3i12
       | Some d' ->
-         match (Util.Date.parse_rfc1123_date d') with
-         | None -> self#v3i12
-         | Some _ -> self#v3h12
+         (* all dates are currently unparseable *)
+         self#v3i12
 
     method v3h12 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3h12";
@@ -710,9 +709,8 @@ module Make(IO:IO) = struct
         >>~ fun l_mod ->
         match (u_mod, l_mod) with
         | (Some u_mod', Some l_mod') ->
-           (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
-           | false -> self#v3i12
-           | true -> self#halt 412)
+           (* all dates are currently unparseable *)
+           self#v3i12
         | (_, _) -> self#v3i12
       with
         Invalid_argument _ -> self#halt 412
@@ -803,21 +801,14 @@ module Make(IO:IO) = struct
       match (self#get_request_header "if-modified-since") with
       | None -> self#v3m16
       | Some date ->
-         match (Util.Date.parse_rfc1123_date date) with
-         | Some _ -> self#v3l15
-         | None ->  self#v3m16
+         (* all dates are currently unparseable *)
+         self#v3m16
 
     method v3l15 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3l15";
-      let now = CalendarLib.Time.now() in
-      match (self#get_request_header "if-modified-since") with
-      | None -> self#v3l17
-      | Some date ->
-         match (Util.Date.parse_rfc1123_date date) with
-         | None -> self#v3l17
-         | Some d -> match (d > now) with
-                     | true -> self#v3m16
-                     | false -> self#v3l17
+      (* we are timeless, which presents a problem here *)
+      (* act as though we always need to server the resource anew *)
+      self#v3m16
 
     method v3l17 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3l17";
@@ -827,9 +818,8 @@ module Make(IO:IO) = struct
         >>~ fun l_mod ->
             match (u_mod, l_mod) with
             | (Some l_mod', Some u_mod') ->
-               (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
-                | true -> self#v3m16
-                | false -> self#halt 304)
+               (* all dates are currently unparseable *)
+               self#v3m16
             | (_, _) -> self#halt 304
       with
         Invalid_argument _ -> self#halt 304
