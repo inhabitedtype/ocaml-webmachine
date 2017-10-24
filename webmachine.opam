@@ -13,7 +13,6 @@ build-test: [
   ["jbuilder" "runtest" "-p" name]
 ]
 depends: [
-  "calendar" {>= "2.03.2"}
   "cohttp" {>= "0.21.0"}
   "dispatch" {>= "0.3.0"}
   "jbuilder" {build & >= "1.0+beta10"}
