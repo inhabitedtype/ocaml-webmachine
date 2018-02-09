@@ -103,7 +103,7 @@ module MediaType = struct
     | MediaType (type_', subtype') -> type_' = type_ && subtype' = subtype
 
   let match_header provided header =
-    let ranges = Accept.(media_ranges header |> qsort) in
+    let ranges = try Accept.(media_ranges header |> qsort) with Parsing.Parse_error -> [] in
     let rec loop = function
       | [] -> None
       | r::rs -> try Some(List.find (media_match r) provided) with Not_found -> loop rs
