@@ -171,7 +171,11 @@ end
 let default_variances =
   [ "Accept"; "Accept-Encoding"; "Accept-Charset"; "Accept-Language"]
 
-module Make(IO:IO) = struct
+module type CLOCK = sig
+  val now : unit -> int
+end
+
+module Make(IO:IO)(Clock:CLOCK) = struct
   type +'a io = 'a IO.t
 
   open IO
@@ -809,7 +813,7 @@ module Make(IO:IO) = struct
 
     method v3l15 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3l15";
-      let now = CalendarLib.Time.now() in
+      let now = Clock.now () in
       match (self#get_request_header "if-modified-since") with
       | None -> self#v3l17
       | Some date ->

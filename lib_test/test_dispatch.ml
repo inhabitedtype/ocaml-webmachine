@@ -40,9 +40,13 @@ module Id = struct
   let run (Id a) = a
 end
 
+module ClockMock = struct
+  let now = fun () -> 1526322704
+end
+
 module Webmachine = struct
   module Rd = Webmachine.Rd
-  include Webmachine.Make(Id)
+  include Webmachine.Make(Id)(ClockMock)
 end
 
 let run = Id.run
