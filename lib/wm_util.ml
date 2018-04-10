@@ -92,7 +92,7 @@ module MediaType = struct
 
   let media_match (_, (range, _)) (type_, _) =
     let type_, subtype =
-      match Re_str.(split (regexp "/") type_) with
+      match Re.Str.(split (regexp "/") type_) with
       | [x; y] -> x, y
       | _      -> assert false
     in
