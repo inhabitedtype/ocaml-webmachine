@@ -31,12 +31,12 @@ This will be better-documented in the future.
 
 ### Examples
 
-To build the examples in the [`examples/`][examples_dir] subdirectory, reconfigure the build
-process and recompile:
+To build the examples in the [`examples/`][examples_dir] subdirectory:
 
 ```bash
-./configure --enable-examples
-make clean && make
+jbuilder build _build/default/examples/hello_lwt.exe
+jbuilder build _build/default/examples/crud_lwt.exe
+jbuilder build _build/default/examples/hello_async.exe
 ```
 
 [diagram]: https://raw.githubusercontent.com/webmachine/webmachine/develop/docs/http-headers-status-v3.png
@@ -56,7 +56,7 @@ After this, you may install a development version of the library using the
 install command as usual.
 
 For building and running the tests during development, you will need to install
-the `oUnit` package and reconfigure the build process to enable tests:
+the `oUnit` package and run tests:
 
 ```bash
 opam install oUnit

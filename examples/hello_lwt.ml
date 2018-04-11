@@ -1,7 +1,6 @@
 open Lwt.Infix
 open Cohttp_lwt
 open Cohttp_lwt_unix
-open Cohttp_lwt_unix_io
 
 (* Apply the [Webmachine.Make] functor to the Lwt_unix-based IO module
  * exported by cohttp. For added convenience, include the [Rd] module
@@ -9,7 +8,7 @@ open Cohttp_lwt_unix_io
  * access request-related information. *)
 module Wm = struct
   module Rd = Webmachine.Rd
-  include Webmachine.Make(Cohttp_lwt_unix_io)
+  include Webmachine.Make(Cohttp_lwt_unix__Io)
 end
 
 (* Create a new class that inherits from [Wm.resource] and provides
@@ -17,7 +16,7 @@ end
  * its default methods.
  *)
 class hello = object(self)
-  inherit [Cohttp_lwt_body.t] Wm.resource
+  inherit [Cohttp_lwt.Body.t] Wm.resource
 
   (* Only allow GET requests to this resource *)
   method allowed_methods rd =

@@ -2,19 +2,14 @@
     stored in-memory and therefore will not persist across runs of the database.
     The application does not perform any JSON validation at this time.
 
-    Build by enabling the [examples] configuration flag:
+    Build by running `jbuilder`:
 
-      [./configure --enable-examples]
-
-    ... or build using the following command (if webmachine is already
-    installed):
-
-      [ocamlbuild -use-ocamlfind -pkgs lwt,cohttp.lwt,webmachine crud_lwt.native]
+      [jbuilder build _build/default/examples/crud_lwt.exe]
 
     Run using the following command, which will display the path that each
     request takes through the decision diagram:
 
-      [DEBUG_PATH= ./crud_lwt.native]
+      [DEBUG_PATH= ./crud_lwt.exe]
 
     Here are some sample CURL commands to test on a running server:
 
@@ -93,14 +88,14 @@ end
  * access request-related information. *)
 module Wm = struct
   module Rd = Webmachine.Rd
-  include Webmachine.Make(Cohttp_lwt_unix_io)
+  include Webmachine.Make(Cohttp_lwt_unix__Io)
 end
 
 (** A resource for querying all the items in the database via GET and creating
     a new item via POST. Check the [Location] header of a successful POST
     response for the URI of the item. *)
 class items db = object(self)
-  inherit [Cohttp_lwt_body.t] Wm.resource
+  inherit [Cohttp_lwt.Body.t] Wm.resource
 
   method private to_json rd =
     Db.get_all db
@@ -121,7 +116,7 @@ class items db = object(self)
     Wm.continue [] rd
 
   method process_post rd =
-    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= fun body ->
+    Cohttp_lwt.Body.to_string rd.Wm.Rd.req_body >>= fun body ->
     Db.add db body >>= fun new_id ->
     let rd' = Wm.Rd.redirect ("/item/" ^ (string_of_int new_id)) rd in
     Wm.continue true rd'
@@ -130,10 +125,10 @@ end
 (** A resource for querying an individual item in the database by id via GET,
     modifying an item via PUT, and deleting an item via DELETE. *)
 class item db = object(self)
-  inherit [Cohttp_lwt_body.t] Wm.resource
+  inherit [Cohttp_lwt.Body.t] Wm.resource
 
   method private of_json rd =
-    Cohttp_lwt_body.to_string rd.Wm.Rd.req_body >>= fun body ->
+    Cohttp_lwt.Body.to_string rd.Wm.Rd.req_body >>= fun body ->
     Db.put db (self#id rd) body >>= fun modified ->
       let resp_body =
         if modified

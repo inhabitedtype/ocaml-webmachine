@@ -44,9 +44,7 @@ issue. To quote a tweet:
 ## Releases
 
 Releases will be prepared and performed by maintainers. Please do not include
-any changes related to release management in your contributions. This inlcudes,
-but is not limited to, changing the version of the package in the `_oasis` and
-`opam` files.
+any changes related to release management in your contributions.
 
 ## Whitespace
 
@@ -60,12 +58,11 @@ In the event that a contribution requires changes to the project's
 dependencies, here's how you should incorporate those changes into the
 build/release process:
 
-[oasis]: https://github.com/inhabitedtype/ocaml-webmachine/tree/master/_oasis
+[jbuild]: https://github.com/inhabitedtype/ocaml-webmachine/tree/master/lib/jbuild
 [OPAM]: http://http://opam.ocaml.org/
 
-1. Modify the [`_oasis`][oasis] file to reflect changed dependencies;
-2. Run `oasis setup` to regenerate files used in the build process; and
-3. Update `opam/opam` to reflect the changes made in the `_oasis` file.
+1. Modify the [`jbuild`][jbuild] file to reflect changed dependencies; and
+2. Update `opam/opam` to reflect the changes made in the `jbuild` file.
 
 Try to include these changes in a separate commit. That's not always possible,
 so don't sweat it too much if you can't.
