@@ -1,5 +1,5 @@
-open Core.Std
-open Async.Std
+open Core
+open Async
 
 open Cohttp_async
 
@@ -58,7 +58,7 @@ class hello = object(self)
    * called ["what"] was introduced by a route, it will use whatever string in
    * that position. Otherwise, it defaults to the string ["world"]. *)
   method private what rd =
-    try Wm.Rd.lookup_path_info_exn "what" rd with Not_found -> "world"
+    try Wm.Rd.lookup_path_info_exn "what" rd with Caml.Not_found -> "world"
 
   (* Returns an html-based representation of the resource *)
   method private to_html rd =
@@ -133,7 +133,7 @@ let main () =
    *   [curl -H"Accept:text/plain" "http://localhost:8080"]
    *   [curl -H"Accept:application/json" "http://localhost:8080"]
    *)
-  Server.create ~on_handler_error:`Raise (Tcp.on_port port) handler
+  Server.create ~on_handler_error:`Raise (Tcp.Where_to_listen.of_port port) handler
   >>> (fun server ->
     Log.Global.info "hello_async: listening on 0.0.0.0:%d%!" port)
 ;;
