@@ -1,6 +1,6 @@
 (jbuild_version 1)
+
 (library
- ((name webmachine)
+ ((name        webmachine)
   (public_name webmachine)
-  (wrapped false)
-  (libraries (calendar cohttp dispatch re re.str uri))))
+  (libraries   (calendar cohttp dispatch re re.str uri))))
