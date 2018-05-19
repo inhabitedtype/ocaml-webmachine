@@ -325,25 +325,22 @@ end
 
     (* using Unix.gettimeofday *)
     module UnixClock = struct
-      let now = fun () -> int_of_float @@ Unix.gettimeofday ()
+      let now = fun () -> int_of_float (Unix.gettimeofday ())
     end
 
     (* using Ptime_clock, which uses the system POSIX clock/gettimeofday *)
     module PtimeClock = struct
       let now = fun () ->
-        let int_of_d_ps (d, ps) =
-          d * 86_400 + Int64.(to_int (div ps 1_000_000_000_000L))
-        in
-        int_of_d_ps @@ Ptime_clock.now_d_ps ()
+        int_of_float (Ptime.to_float (Ptime_clock.now ()))
     end
 
     (* using mirage-clock in MirageOS unikernels *)
     module MirageClock = struct
       let now = fun () ->
-        let int_of_d_ps (d, ps) =
-          d * 86_400 + Int64.(to_int (div ps 1_000_000_000_000L))
-        in
-        int_of_d_ps @@ Pclock.now_d_ps clock
+        let d, ps = Pclock.now_d_ps clock in
+        let days_in_seconds  = d * 86_400 in
+        let picos_in_seconds = Int64.(to_int (div ps (1_000_000_000_000L))) i
+        days_in_seconds + picos_in_seconds
     end
 *)
 module type CLOCK = sig
