@@ -9,7 +9,10 @@ open Cohttp_async
  * information. *)
 module Wm = struct
   module Rd = Webmachine.Rd
-  include Webmachine.Make(Cohttp_async.Io)
+  module UnixClock = struct
+    let now = fun () -> int_of_float (Unix.gettimeofday ())
+  end
+  include Webmachine.Make(Cohttp_async.Io)(UnixClock)
 end
 
 (* Create a new class that inherits from [Wm.resource] and provides

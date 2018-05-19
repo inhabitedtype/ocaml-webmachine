@@ -8,7 +8,10 @@ open Cohttp_lwt_unix
  * access request-related information. *)
 module Wm = struct
   module Rd = Webmachine.Rd
-  include Webmachine.Make(Cohttp_lwt_unix__Io)
+  module UnixClock = struct
+    let now = fun () -> int_of_float (Unix.gettimeofday ())
+  end
+  include Webmachine.Make(Cohttp_lwt_unix__Io)(UnixClock)
 end
 
 (* Create a new class that inherits from [Wm.resource] and provides

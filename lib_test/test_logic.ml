@@ -41,21 +41,13 @@ module Id = struct
 
 end
 
-module Webmachine = struct
-  module Rd = Webmachine.Rd
-  include Webmachine.Make(Id)
+module ClockMock = struct
+  let now = fun () -> 1526322704
 end
 
-(* TODO pull in from wm_util.ml rather than copy pasta *)
-module Date = struct
-  open CalendarLib
-
-  let parse_rfc1123_date_exn s =
-    Printer.Time.from_fstring "%a, %d %b %Y %H:%M:%S GMT" s
-
-  let parse_rfc1123_date s =
-    try (Some (parse_rfc1123_date_exn s)) with
-    | Invalid_argument _ -> None
+module Webmachine = struct
+  module Rd = Webmachine.Rd
+  include Webmachine.Make(Id)(ClockMock)
 end
 
 let run = Id.run

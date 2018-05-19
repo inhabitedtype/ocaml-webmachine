@@ -38,7 +38,8 @@
     REST-aware layer on top of {{:https://github.com/mirage/ocaml-cohttp} cohttp}.
 
     To use this module, apply the {{!Make}[Make]} functor to an {{!IO}[IO]}
-    module, and subclass the {{!classtype:S.resource}resouce} virtual class. *)
+    and a {{!CLOCK}[CLOCK]} module, and subclass the
+    {{!classtype:S.resource}resouce} virtual class. *)
 
 open Cohttp
 
@@ -312,5 +313,39 @@ module type S = sig
         {[([`Lit, "user"; `Var "id"], `Prefix, user_resource)]} *)
 end
 
-module Make(IO:IO) : S
+(** The [CLOCK] module signature defines a clock source, that is used with the
+    Webmachine.Make(IO)(Clock) functor.
+
+    Examples:
+
+    (* static mock time *)
+    module MockClock = struct
+      let now = fun () -> 1526322704
+    end
+
+    (* using Unix.gettimeofday *)
+    module UnixClock = struct
+      let now = fun () -> int_of_float (Unix.gettimeofday ())
+    end
+
+    (* using Ptime_clock, which uses the system POSIX clock/gettimeofday *)
+    module PtimeClock = struct
+      let now = fun () ->
+        int_of_float (Ptime.to_float (Ptime_clock.now ()))
+    end
+
+    (* using mirage-clock in MirageOS unikernels *)
+    module MirageClock = struct
+      let now = fun () ->
+        let d, ps = Pclock.now_d_ps clock in
+        let days_in_seconds  = d * 86_400 in
+        let picos_in_seconds = Int64.(to_int (div ps (1_000_000_000_000L))) i
+        days_in_seconds + picos_in_seconds
+    end
+*)
+module type CLOCK = sig
+  val now : unit -> int
+end
+
+module Make(IO:IO)(Clock:CLOCK) : S
   with type +'a io = 'a IO.t
