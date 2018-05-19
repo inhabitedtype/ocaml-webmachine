@@ -89,7 +89,7 @@ end
 module Wm = struct
   module Rd = Webmachine.Rd
   module UnixClock = struct
-    let now = fun () -> int_of_float @@ Unix.gettimeofday ()
+    let now = fun () -> int_of_float (Unix.gettimeofday ())
   end
   include Webmachine.Make(Cohttp_lwt_unix__Io)(UnixClock)
 end

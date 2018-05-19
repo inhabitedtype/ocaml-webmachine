@@ -139,15 +139,15 @@ module Date = struct
         let time = ((hour, min, sec), (parse_tz tz)*60) in
         let ptime = Ptime.of_date_time (date, time) in
         match ptime with
-          | None -> raise @@ Invalid_argument "Invalid date string"
+          | None -> raise (Invalid_argument "Invalid date string")
           | Some date ->
         match Ptime.(Span.to_int_s (to_span date)) with
-          | None -> raise @@ Invalid_argument "Invalid date string"
+          | None -> raise (Invalid_argument "Invalid date string")
           | Some t -> t
     )
     with
-      | Scanf.Scan_failure e -> raise @@ Invalid_argument e
-      | Not_found -> raise @@ Invalid_argument "Invalid date string"
+      | Scanf.Scan_failure e -> raise (Invalid_argument e)
+      | Not_found -> raise (Invalid_argument "Invalid date string")
 
   let parse_rfc1123_date s =
     try (Some (parse_rfc1123_date_exn s)) with
