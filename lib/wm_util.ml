@@ -112,23 +112,13 @@ module MediaType = struct
 end
 
 module Date = struct
-  let parse_rfc1123_date_exn s =
-    try Scanf.sscanf s "%3s, %d %s %4d %d:%d:%d %s" (
-      fun _wday mday mon year hour min sec tz ->
+  let parse_http_date_exn s =
+    try Scanf.sscanf s "%3s, %2u %3s %4u %2u:%2u:%2u GMT" (
+      fun _wday mday mon year hour min sec ->
         let months = [
           "Jan", 1; "Feb", 2; "Mar", 3; "Apr", 4; "May", 5; "Jun", 6;
           "Jul", 7; "Aug", 8; "Sep", 9; "Oct", 10; "Nov", 11; "Dec", 12
         ] in
-        let parse_tz = function
-          | "" | "Z" | "GMT" | "UTC" | "UT" -> 0
-          | "PST" -> -480
-          | "MST" | "PDT" -> -420
-          | "CST" | "MDT" -> -360
-          | "EST" | "CDT" -> -300
-          | "EDT" -> -240
-          | s -> Scanf.sscanf s "%c%02d%_[:]%02d" (fun sign hour min ->
-              min + hour * (if sign = '-' then -60 else 60))
-        in
         let mon = List.assoc mon months in
         let year =
           if year < 50 then year + 2000
@@ -136,7 +126,7 @@ module Date = struct
           else year
         in
         let date = (year, mon, mday) in
-        let time = ((hour, min, sec), (parse_tz tz)*60) in
+        let time = ((hour, min, sec), 0) in
         let ptime = Ptime.of_date_time (date, time) in
         match ptime with
           | None -> raise (Invalid_argument "Invalid date string")
@@ -149,7 +139,7 @@ module Date = struct
       | Scanf.Scan_failure e -> raise (Invalid_argument e)
       | Not_found -> raise (Invalid_argument "Invalid date string")
 
-  let parse_rfc1123_date s =
-    try (Some (parse_rfc1123_date_exn s)) with
+  let parse_http_date s =
+    try (Some (parse_http_date_exn s)) with
     | Invalid_argument _ -> None
 end
