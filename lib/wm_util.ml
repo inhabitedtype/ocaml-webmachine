@@ -79,12 +79,13 @@ module ETag = struct
     Printf.sprintf "%s" etag
 
   let unescape s =
-    Scanf.sscanf ("\"" ^ s ^ "\"") "%S" (fun u -> u)
+    (* Scanf.sscanf ("\"" ^ s ^ "\"") "%S" (fun u -> u) *)
+    let l = String.length s in
+    if l > 0 && String.get s 0 = '"'
+    then String.sub s 1 (l - 2)
+    else s
 
-  let from_header = function
-    | None   -> []
-    | Some s ->
-      List.map unescape (re_split_ws (Re.char ',') s)
+  let from_header s = List.map unescape (re_split_ws (Re.char ',') s)
 end
 
 module MediaType = struct

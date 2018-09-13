@@ -676,10 +676,12 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       self#d "v3g11";
       match self#get_request_header "if-match" with
       | None      -> assert false
-      | Some etag ->
+      | Some if_match_header ->
         self#run_op resource#generate_etag
-        >>~ fun header ->
-          begin match List.mem etag (Util.ETag.from_header header) with
+        >>~ function
+        | None -> self#halt 412
+        | Some etag ->
+          begin match List.mem etag (Util.ETag.from_header if_match_header) with
           | true  -> self#v3h10
           | false -> self#halt 412
           end
@@ -771,10 +773,12 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       self#d "v3k13";
       match self#get_request_header "if-none-match" with
       | None      -> assert false
-      | Some etag ->
+      | Some if_none_match_header ->
         self#run_op resource#generate_etag
-        >>~ fun header ->
-          begin match List.mem etag (Util.ETag.from_header header) with
+        >>~ function
+        | None -> self#v3l13
+        | Some etag ->
+          begin match List.mem etag (Util.ETag.from_header if_none_match_header) with
           | true  -> self#v3j18
           | false -> self#v3l13
           end
