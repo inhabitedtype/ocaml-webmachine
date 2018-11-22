@@ -76,13 +76,12 @@ let choose (choices : (string * _) list) (accepted : (int * string) list) (defau
 
 module ETag = struct
   let escape etag =
-    Printf.sprintf "%s" etag
+    Printf.sprintf "%S" etag
 
   let unescape s =
-    (* Scanf.sscanf ("\"" ^ s ^ "\"") "%S" (fun u -> u) *)
     let l = String.length s in
     if l > 0 && String.get s 0 = '"'
-    then String.sub s 1 (l - 2)
+    then Scanf.sscanf s "%S" (fun u -> u)
     else s
 
   let from_header s = List.map unescape (re_split_ws (Re.char ',') s)

@@ -391,6 +391,8 @@ module Path = struct
    * and k13; one via h12) *)
   let to_j18_via_i13_h10_g8_f6_e6_d5_c4 =
     to_i13_via_h10_g8_f6_e6_d5_c4 @ ["v3j18"]
+  let to_j18_via_k13_i13_h10_g8_f6_e6_d5_c4 =
+    to_i13_via_h10_g8_f6_e6_d5_c4 @ ["v3k13";"v3j18"]
   let to_j18_via_k13_h11_g11_f6_e6_d5_c4 =
     to_k13_via_h11_g11_f6_e6_d5_c4 @ ["v3j18"]
   let to_j18_no_acpthead = to_j18_via_i13_h10_g8_f6_e6_d5_c4
@@ -407,6 +409,10 @@ module Path = struct
   (* o20 - the path to o20 via p11 via o14 *)
   let to_o20_via_p11_via_o14_no_acpthead =
     to_p11_via_o14_no_acpthead @ ["v3o20"]
+
+  (* o18 *)
+  let to_o18_no_acpthead_via_ifmatch =
+    to_k13_via_h11_g11_f6_e6_d5_c4 @ ["v3l13";"v3m16";"v3n16";"v3o16";"v3o18"]
 end
 
 let with_test_resource f =
@@ -954,46 +960,94 @@ moved_temporarily_l5() ->
     ExpectedDecisionTrace = ?PATH_TO_L5_NO_ACPTHEAD,
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
-
-%% 304 result via J18 via K13 via H11 via G11
-not_modified_j18() ->
-    put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
-    Headers = [{"If-None-Match", "*"}],
-    {ok, Result} = httpc:request(get, {url(), Headers}, [], []),
-    ?assertMatch({{"HTTP/1.1", 304, "Not Modified"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_J18_NO_ACPTHEAD,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
-
-%% 304 result via J18 via K13 via H11 via G11
-not_modified_j18_via_k13() ->
-    put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
-    put_setting(generate_etag, "v1"),
-    Headers = [{"If-Match", "\"v1\""},
-               {"If-None-Match", "\"v1\""},
-               {"If-Unmodified-Since", "{{INVALID DATE}}"}],
-    {ok, Result} = httpc:request(get, {url(), Headers}, [], []),
-    ?assertMatch({{"HTTP/1.1", 304, "Not Modified"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_J18_NO_ACPTHEAD_2,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
-
-%% 304 result via J18 via I13 via I12 via H12
-not_modified_j18_via_h12() ->
-    put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
-    TenAM = "Wed, 20 Feb 2013 10:00:00 GMT",
-    FivePM = "Wed, 20 Feb 2013 17:00:00 GMT",
-    ResErlDate = httpd_util:convert_request_date(TenAM),
-    put_setting(last_modified, ResErlDate),
-    Headers = [{"If-Match", "*"},
-               {"If-None-Match", "*"},
-               {"If-Unmodified-Since", FivePM}],
-    {ok, Result} = httpc:request(get, {url(), Headers}, [], []),
-    ?assertMatch({{"HTTP/1.1", 304, "Not Modified"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_J18_NO_ACPTHEAD_3,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
 *)
+
+(* %% 304 result via J18 via K13 via H11 via G11 *)
+let not_modified_j18 () =
+  let headers = Header.of_list [("If-None-Match", "*")] in
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    Request.make ~headers ~meth:`GET Uri.(of_string "/foo")
+  end in
+  assert_path ~msg:"304 path" result Path.to_j18_no_acpthead;
+  assert_status ~msg:"304 result with if-none-match" result 304;
+;;
+
+(* %% 304 result via J18 via K13 via H11 via G11 *)
+let not_modified_j18_via_k13 () =
+  let headers = Header.of_list [
+      ("If-Match", "\"v1\"");
+      ("If-None-Match", "\"v1\"");
+      ("If-Unmodified-Since", "{{INVALID DATE}}")
+    ] in
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_generate_etag (Some "v1");
+    Request.make ~headers ~meth:`GET Uri.(of_string "/foo")
+  end in
+  assert_path ~msg:"304 path" result Path.to_j18_no_acpthead_2;
+  assert_status ~msg:"304 result with if-none-match" result 304;
+;;
+
+let not_modified_j18_multiple_if_match () =
+  let headers = Header.of_list [
+      ("If-Match", "\"v1\", \"v2\"");
+      ("If-None-Match", "\"v1\", \"v2\""); (* this is required for GET/HEAD! *)
+      ("If-Unmodified-Since", "{{INVALID DATE}}")
+    ] in
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_generate_etag (Some "v2");
+    Request.make ~headers ~meth:`GET Uri.(of_string "/foo")
+  end in
+  assert_path ~msg:"304 path" result Path.to_j18_no_acpthead_2;
+  assert_status ~msg:"304 result with if-none-match" result 304;
+;;
+
+let not_modified_j18_multiple_if_none_match () =
+  let headers = Header.of_list [
+      ("If-None-Match", "\"v1\", \"v2\""); (* this is required for GET/HEAD! *)
+    ] in
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_generate_etag (Some "v2");
+    Request.make ~headers ~meth:`GET Uri.(of_string "/foo")
+  end in
+  assert_path ~msg:"304 path" result Path.to_j18_via_k13_i13_h10_g8_f6_e6_d5_c4;
+  assert_status ~msg:"304 result with if-none-match" result 304;
+;;
+
+let not_modified_j18_multiple_if_none_match_first () =
+  let headers = Header.of_list [
+      ("If-None-Match", "\"v1\", \"v2\""); (* this is required for GET/HEAD! *)
+    ] in
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_generate_etag (Some "v1");
+    Request.make ~headers ~meth:`GET Uri.(of_string "/foo")
+  end in
+  assert_path ~msg:"304 path" result Path.to_j18_via_k13_i13_h10_g8_f6_e6_d5_c4;
+  assert_status ~msg:"304 result with if-none-match" result 304;
+;;
+
+(* %% 304 result via J18 via I13 via I12 via H12 *)
+let not_modified_j18_via_h12 () =
+  let tenAM = "Wed, 20 Feb 2013 10:00:00 GMT"
+  and fivePM = "Wed, 20 Feb 2013 17:00:00 GMT"
+  in
+  let headers = Header.of_list [
+      ("If-Match", "*");
+      ("If-None-Match", "*");
+      ("If-Unmodified-Since", fivePM)
+    ] in
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_last_modified (Some tenAM);
+    Request.make ~headers ~meth:`GET Uri.(of_string "/foo")
+  end in
+  assert_path ~msg:"304 path" result Path.to_j18_no_acpthead_3;
+  assert_status ~msg:"304 result with if-none-match" result 304;
+;;
 
 let not_modified_l17 () =
   let first_day_of_last_year = "Tue, 01 Jan 2015 00:00:00 GMT" in
@@ -1009,7 +1063,6 @@ let not_modified_l17 () =
 ;;
 
 (*
-
 %% 303 result via N11 using request data rewriting
 see_other_n11() ->
     put_setting(allowed_methods, ['GET', 'POST', 'PUT']),
@@ -1450,6 +1503,12 @@ let _ =
     "variances_o18_2" >:: variances_o18_2;
     "multiple_choices_o18" >:: multiple_choices_o18;
     "not_modified_l17" >:: not_modified_l17;
+    "not_modified_j18" >:: not_modified_j18;
+    "not modified j18 via k13" >:: not_modified_j18_via_k13;
+    "not modified j18 multiple if-match" >:: not_modified_j18_multiple_if_match;
+    "not modified j18 multiple if-none-match first" >:: not_modified_j18_multiple_if_none_match_first;
+    "not modified j18 multiple if-none-match second" >:: not_modified_j18_multiple_if_none_match;
+    "not modified j18 via h12" >:: not_modified_j18_via_h12;
     "create_p11_put" >:: create_p11_put
   ] in
   let suite = (Printf.sprintf "test logic") >::: tests in
