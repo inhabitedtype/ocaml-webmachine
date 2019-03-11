@@ -22,7 +22,7 @@ class hello = object(self)
   inherit [Body.t] Wm.resource
 
   (* Only allow GET requests to this resource *)
-  method allowed_methods rd =
+  method! allowed_methods rd =
     Wm.continue [`GET] rd
 
   (* Setup the resource to handle multiple content-types. Webmachine will
@@ -137,7 +137,7 @@ let main () =
    *   [curl -H"Accept:application/json" "http://localhost:8080"]
    *)
   Server.create ~on_handler_error:`Raise (Tcp.Where_to_listen.of_port port) handler
-  >>> (fun server ->
+  >>> (fun _server ->
     Log.Global.info "hello_async: listening on 0.0.0.0:%d%!" port)
 ;;
 
