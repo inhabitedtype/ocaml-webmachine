@@ -60,7 +60,7 @@ the `oUnit` package and run tests:
 
 ```bash
 opam install oUnit
-jbuilder runtest
+dune runtest
 ```
 
 ## License

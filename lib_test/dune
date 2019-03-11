@@ -1,0 +1,4 @@
+(tests
+ (libraries webmachine oUnit)
+ (modules test_dispatch test_logic)
+ (names test_dispatch test_logic))

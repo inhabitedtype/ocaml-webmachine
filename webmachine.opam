@@ -6,16 +6,16 @@ homepage: "https://github.com/inhabitedtype/ocaml-webmachine"
 dev-repo: "git+https://github.com/inhabitedtype/ocaml-webmachine.git"
 bug-reports: "https://github.com/inhabitedtype/ocaml-webmachine/issues"
 build: [
-  ["jbuilder" "subst"] {pinned}
-  ["jbuilder" "build" "-p" name "-j" jobs]
-  ["jbuilder" "runtest" "-p" name] {with-test}
+  ["dune" "subst"] {pinned}
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
 ]
 depends: [
   "ocaml" {>= "4.03.0"}
   "ptime" {>= "0.8.0"}
   "cohttp" {>= "1.0.0"}
   "dispatch" {>= "0.3.0"}
-  "jbuilder" {build & >= "1.0+beta10"}
+  "dune" {build & >= "1.0"}
   "ounit" {with-test & >= "1.0.2"}
   "re" {>= "1.7.2"}
 ]
