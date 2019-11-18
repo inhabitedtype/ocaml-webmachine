@@ -263,6 +263,23 @@ module type S = sig
     method finish_request : (unit, 'body) op
     (** This method is called just before the final response is constructed and
         returned. *)
+
+    method post_is_create : (bool, 'body) op
+    (** If POST requests should be treated as a request to put content into a 
+        (potentially new) resource as opposed to being a generic submission for 
+        processing, then this function should return true. If it does return true, 
+        then create_path will be called and the rest of the request will be treated 
+        much like a PUT to the Path entry returned by that call. 
+
+        {i Default}: false *)
+
+    method create_path : (string, 'body) op
+    (** This will be called on a POST request if post_is_create returns true. It is 
+        an error for this function not to produce a Path if post_is_create returns 
+        true. The Path returned should be a valid URI part following the dispatcher 
+        prefix. That Path will replace the previous one in the return value of 
+        wrq:disp_path(ReqData) for all subsequent resource function calls in the 
+        course of this request. *)
   end
 
   val to_handler :
