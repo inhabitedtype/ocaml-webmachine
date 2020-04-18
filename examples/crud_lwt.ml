@@ -2,9 +2,9 @@
     stored in-memory and therefore will not persist across runs of the database.
     The application does not perform any JSON validation at this time.
 
-    Build by running `jbuilder`:
+    Build by running `dune`:
 
-      [jbuilder build _build/default/examples/crud_lwt.exe]
+      [dune build examples/crud_lwt.exe]
 
     Run using the following command, which will display the path that each
     request takes through the decision diagram:
@@ -107,7 +107,7 @@ class items db = object(self)
       let json = Printf.sprintf "[%s]" (String.concat ", " values) in
       Wm.continue (`String json) rd
 
-  method allowed_methods rd =
+  method! allowed_methods rd =
     Wm.continue [`GET; `HEAD; `POST] rd
 
   method content_types_provided rd =
@@ -118,7 +118,7 @@ class items db = object(self)
   method content_types_accepted rd =
     Wm.continue [] rd
 
-  method process_post rd =
+  method! process_post rd =
     Cohttp_lwt.Body.to_string rd.Wm.Rd.req_body >>= fun body ->
     Db.add db body >>= fun new_id ->
     let rd' = Wm.Rd.redirect ("/item/" ^ (string_of_int new_id)) rd in
@@ -147,10 +147,10 @@ class item db = object(self)
       | Some (_, value) ->
         Wm.continue (`String value) rd
 
-  method allowed_methods rd =
+  method! allowed_methods rd =
     Wm.continue [`GET; `HEAD; `PUT; `DELETE] rd
 
-  method resource_exists rd =
+  method! resource_exists rd =
     Db.get db (self#id rd)
     >>= function
       | None   -> Wm.continue false rd
@@ -166,7 +166,7 @@ class item db = object(self)
       "application/json", self#of_json
     ] rd
 
-  method delete_resource rd =
+  method! delete_resource rd =
     Db.delete db (self#id rd)
     >>= fun deleted ->
       let resp_body =
@@ -190,7 +190,7 @@ let main () =
     ("/items", fun () -> new items db) ;
     ("/item/:id", fun () -> new item db) ;
   ] in
-  let callback (ch, conn) request body =
+  let callback (_ch, _conn) request body =
     let open Cohttp in
     (* Perform route dispatch. If [None] is returned, then the URI path did not
      * match any of the route patterns. In this case the server should return a
@@ -222,7 +222,7 @@ let main () =
       Server.respond ~headers ~body ~status ()
   in
   (* create the server and handle requests with the function defined above *)
-  let conn_closed (ch, conn) =
+  let conn_closed (ch, _conn) =
     Printf.printf "connection %s closed\n%!"
       (Sexplib.Sexp.to_string_hum (Conduit_lwt_unix.sexp_of_flow ch))
   in

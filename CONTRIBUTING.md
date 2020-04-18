@@ -58,11 +58,11 @@ In the event that a contribution requires changes to the project's
 dependencies, here's how you should incorporate those changes into the
 build/release process:
 
-[jbuild]: https://github.com/inhabitedtype/ocaml-webmachine/tree/master/lib/jbuild
+[dune]: https://github.com/inhabitedtype/ocaml-webmachine/tree/master/lib/dune
 [OPAM]: http://http://opam.ocaml.org/
 
-1. Modify the [`jbuild`][jbuild] file to reflect changed dependencies; and
-2. Update `opam/opam` to reflect the changes made in the `jbuild` file.
+1. Modify the [`dune`][dune] file to reflect changed dependencies; and
+2. Update `opam/opam` to reflect the changes made in the `dune` file.
 
 Try to include these changes in a separate commit. That's not always possible,
 so don't sweat it too much if you can't.

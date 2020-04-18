@@ -34,9 +34,9 @@ This will be better-documented in the future.
 To build the examples in the [`examples/`][examples_dir] subdirectory:
 
 ```bash
-jbuilder build _build/default/examples/hello_lwt.exe
-jbuilder build _build/default/examples/crud_lwt.exe
-jbuilder build _build/default/examples/hello_async.exe
+dune build examples/hello_lwt.exe
+dune build examples/crud_lwt.exe
+dune build examples/hello_async.exe
 ```
 
 [diagram]: https://raw.githubusercontent.com/webmachine/webmachine/develop/docs/http-headers-status-v3.png
@@ -60,7 +60,7 @@ the `oUnit` package and run tests:
 
 ```bash
 opam install oUnit
-jbuilder runtest
+dune runtest
 ```
 
 ## License
