@@ -180,7 +180,7 @@ module type S = sig
     method valid_entity_length : (bool, 'body) op
     (** Returning [false] will result in [413 Request Entity Too Large].
 
-        {i Default} : [false] *)
+        {i Default} : [true] *)
 
     method options : ((string * string) list, 'body) op
     (** If the [`OPTIONS] method is supported by this resource, the returned
