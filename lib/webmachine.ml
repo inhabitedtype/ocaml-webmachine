@@ -704,7 +704,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       match d with
       | None -> self#v3i12
       | Some d' ->
-         match (Util.Date.parse_rfc1123_date d') with
+         match (Rfc1123.parse_date d') with
          | None -> self#v3i12
          | Some _ -> self#v3h12
 
@@ -716,7 +716,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         >>~ fun l_mod ->
         match (u_mod, l_mod) with
         | (Some u_mod', Some l_mod') ->
-           (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
+           (match (Rfc1123.parse_date_exn l_mod') > (Rfc1123.parse_date_exn u_mod') with
            | false -> self#v3i12
            | true -> self#halt 412)
         | (_, _) -> self#v3i12
@@ -811,7 +811,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       match (self#get_request_header "if-modified-since") with
       | None -> self#v3m16
       | Some date ->
-         match (Util.Date.parse_rfc1123_date date) with
+         match (Rfc1123.parse_date date) with
          | Some _ -> self#v3l15
          | None ->  self#v3m16
 
@@ -821,7 +821,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       match (self#get_request_header "if-modified-since") with
       | None -> self#v3l17
       | Some date ->
-         match (Util.Date.parse_rfc1123_date date) with
+         match Rfc1123.parse_date date with
          | None -> self#v3l17
          | Some d -> match (d > now) with
                      | true -> self#v3m16
@@ -835,7 +835,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         >>~ fun l_mod ->
             match (u_mod, l_mod) with
             | (Some l_mod', Some u_mod') ->
-               (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
+               (match (Rfc1123.parse_date_exn l_mod') > (Rfc1123.parse_date_exn u_mod') with
                 | true -> self#v3m16
                 | false -> self#halt 304)
             | (_, _) -> self#halt 304
