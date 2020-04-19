@@ -681,7 +681,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         >>~ function
         | None -> self#halt 412
         | Some etag ->
-          begin match List.mem etag (Util.ETag.from_header if_match_header) with
+          begin match List.mem etag (Etag.from_header if_match_header) with
           | true  -> self#v3h10
           | false -> self#halt 412
           end
@@ -778,7 +778,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         >>~ function
         | None -> self#v3l13
         | Some etag ->
-          begin match List.mem etag (Util.ETag.from_header if_none_match_header) with
+          begin match List.mem etag (Etag.from_header if_none_match_header) with
           | true  -> self#v3j18
           | false -> self#v3l13
           end
@@ -917,7 +917,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         self#run_op resource#generate_etag >>~ fun etag ->
           begin match etag with
           | None -> ()
-          | Some etag -> self#set_response_header "ETag" (Util.ETag.escape etag)
+          | Some etag -> self#set_response_header "ETag" (Etag.escape etag)
           end;
           (* XXX(seliopou) last modified *)
           (* XXX(seliopou) expires *)
