@@ -68,30 +68,6 @@ let choose (choices : (string * _) list) (accepted : (int * string) list) (defau
   loop choices accepted
 ;;
 
-module MediaType = struct
-  open Cohttp
-
-  let media_match (_, (range, _)) (type_, _) =
-    let type_, subtype =
-      match Re.Str.(split (regexp "/") type_) with
-      | [x; y] -> x, y
-      | _      -> assert false
-    in
-    let open Accept in
-    match range with
-    | AnyMedia                     -> true
-    | AnyMediaSubtype type_'       -> type_' = type_
-    | MediaType (type_', subtype') -> type_' = type_ && subtype' = subtype
-
-  let match_header provided header =
-    let ranges = try Accept.(media_ranges header |> qsort) with Parsing.Parse_error -> [] in
-    let rec loop = function
-      | [] -> None
-      | r::rs -> try Some(List.find (media_match r) provided) with Not_found -> loop rs
-    in
-    loop ranges
-end
-
 module Date = struct
   let parse_rfc1123_date_exn s =
     try Scanf.sscanf s "%3s, %d %s %4d %d:%d:%d %s" (

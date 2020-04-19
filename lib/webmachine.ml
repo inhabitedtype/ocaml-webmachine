@@ -424,7 +424,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       in
       self#run_op resource#content_types_accepted
       >>~ fun provided ->
-        match Util.MediaType.match_header provided header with
+        match Mediatype.match_header provided header with
         | None                -> self#halt 415
         | Some(_, of_content) ->
           self#run_op of_content
@@ -568,7 +568,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       self#run_op resource#content_types_provided
       >>~ fun content_types ->
         let header = self#get_request_header "accept" in
-        match Util.MediaType.match_header content_types header with
+        match Mediatype.match_header content_types header with
         | None   -> self#halt 406
         | Some t ->
           content_type <- Some t;
