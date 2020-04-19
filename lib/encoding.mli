@@ -1,5 +1,5 @@
 (*----------------------------------------------------------------------------
-    Copyright (c) 2015 Inhabited Type LLC.
+    Copyright (c) 2020 Inhabited Type LLC.
 
     All rights reserved.
 
@@ -31,39 +31,8 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
-let choose (choices : (string * _) list) (accepted : (int * string) list) (default:string) =
-  let any_prio     = List.filter (fun (_, c) -> c = "*"    ) accepted in
-  let default_prio = List.filter (fun (_, c) -> c = default) accepted in
-  let default_ok =
-    match default_prio with
-    | [] ->
-      begin match any_prio with
-      | [0, _] -> false
-      | _   -> true
-      end
-    | [0, _] -> false
-    | _ -> true
-  in
-  let any_ok =
-    match any_prio with
-    | [] | [0, _] -> false
-    | _           -> true
-  in
-  let rec loop choices accepted =
-    match choices, accepted with
-    | [], [] -> None
-    | [], _  -> None
-    | _ , [] ->
-      if any_ok then
-        Some (List.hd choices)
-      else if default_ok then
-        try Some(default, List.assoc default choices) with Not_found -> None
-      else
-        None
-    | _, (0, x)::xs ->
-      loop (List.filter (fun (y, _) -> x <> y) choices) xs
-    | _, (_, x)::xs ->
-      try Some(x, List.assoc x choices) with Not_found -> loop choices xs
-  in
-  loop choices accepted
-;;
+val choose
+  :  available:(string * 'a) list
+  -> acceptable:(int * string) list
+  -> default:string
+  -> (string * 'a) option

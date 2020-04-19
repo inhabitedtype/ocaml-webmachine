@@ -33,8 +33,6 @@
 
 open Cohttp
 
-module Util = Wm_util
-
 module type IO = sig
   type +'a t
 
@@ -359,9 +357,9 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       >>= function
         | Ok [], rd' ->
           rd <- rd'; k`Any
-        | Ok provided, rd' ->
+        | Ok available, rd' ->
           rd <- rd';
-          charset <- Util.choose provided acceptable "iso-885a-1";
+          charset <- Encoding.choose ~available ~acceptable ~default:"iso-885a-1";
           k (`One charset)
         | Error n, rd' ->
           rd <- rd';
@@ -384,9 +382,9 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       in
       resource#encodings_provided rd
       >>= function
-        | Ok encodings, rd' ->
+        | Ok available, rd' ->
           rd <- rd';
-          encoding <- Util.choose encodings acceptable "identity";
+          encoding <- Encoding.choose ~available ~acceptable ~default:"identity";
           k encoding
         | Error n, rd' ->
           rd <- rd';
