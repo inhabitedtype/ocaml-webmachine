@@ -33,8 +33,6 @@
 
 open Cohttp
 
-module Util = Wm_util
-
 module type IO = sig
   type +'a t
 
@@ -359,9 +357,9 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       >>= function
         | Ok [], rd' ->
           rd <- rd'; k`Any
-        | Ok provided, rd' ->
+        | Ok available, rd' ->
           rd <- rd';
-          charset <- Util.choose provided acceptable "iso-885a-1";
+          charset <- Encoding.choose ~available ~acceptable ~default:"iso-885a-1";
           k (`One charset)
         | Error n, rd' ->
           rd <- rd';
@@ -384,9 +382,9 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       in
       resource#encodings_provided rd
       >>= function
-        | Ok encodings, rd' ->
+        | Ok available, rd' ->
           rd <- rd';
-          encoding <- Util.choose encodings acceptable "identity";
+          encoding <- Encoding.choose ~available ~acceptable ~default:"identity";
           k encoding
         | Error n, rd' ->
           rd <- rd';
@@ -424,7 +422,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       in
       self#run_op resource#content_types_accepted
       >>~ fun provided ->
-        match Util.MediaType.match_header provided header with
+        match Mediatype.match_header provided header with
         | None                -> self#halt 415
         | Some(_, of_content) ->
           self#run_op of_content
@@ -568,7 +566,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       self#run_op resource#content_types_provided
       >>~ fun content_types ->
         let header = self#get_request_header "accept" in
-        match Util.MediaType.match_header content_types header with
+        match Mediatype.match_header content_types header with
         | None   -> self#halt 406
         | Some t ->
           content_type <- Some t;
@@ -681,7 +679,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         >>~ function
         | None -> self#halt 412
         | Some etag ->
-          begin match List.mem etag (Util.ETag.from_header if_match_header) with
+          begin match List.mem etag (Etag.from_header if_match_header) with
           | true  -> self#v3h10
           | false -> self#halt 412
           end
@@ -704,7 +702,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       match d with
       | None -> self#v3i12
       | Some d' ->
-         match (Util.Date.parse_rfc1123_date d') with
+         match (Rfc1123.parse_date d') with
          | None -> self#v3i12
          | Some _ -> self#v3h12
 
@@ -716,7 +714,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         >>~ fun l_mod ->
         match (u_mod, l_mod) with
         | (Some u_mod', Some l_mod') ->
-           (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
+           (match (Rfc1123.parse_date_exn l_mod') > (Rfc1123.parse_date_exn u_mod') with
            | false -> self#v3i12
            | true -> self#halt 412)
         | (_, _) -> self#v3i12
@@ -778,7 +776,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         >>~ function
         | None -> self#v3l13
         | Some etag ->
-          begin match List.mem etag (Util.ETag.from_header if_none_match_header) with
+          begin match List.mem etag (Etag.from_header if_none_match_header) with
           | true  -> self#v3j18
           | false -> self#v3l13
           end
@@ -811,7 +809,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       match (self#get_request_header "if-modified-since") with
       | None -> self#v3m16
       | Some date ->
-         match (Util.Date.parse_rfc1123_date date) with
+         match (Rfc1123.parse_date date) with
          | Some _ -> self#v3l15
          | None ->  self#v3m16
 
@@ -821,7 +819,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       match (self#get_request_header "if-modified-since") with
       | None -> self#v3l17
       | Some date ->
-         match (Util.Date.parse_rfc1123_date date) with
+         match Rfc1123.parse_date date with
          | None -> self#v3l17
          | Some d -> match (d > now) with
                      | true -> self#v3m16
@@ -835,7 +833,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         >>~ fun l_mod ->
             match (u_mod, l_mod) with
             | (Some l_mod', Some u_mod') ->
-               (match (Util.Date.parse_rfc1123_date_exn l_mod') > (Util.Date.parse_rfc1123_date_exn u_mod') with
+               (match (Rfc1123.parse_date_exn l_mod') > (Rfc1123.parse_date_exn u_mod') with
                 | true -> self#v3m16
                 | false -> self#halt 304)
             | (_, _) -> self#halt 304
@@ -917,7 +915,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         self#run_op resource#generate_etag >>~ fun etag ->
           begin match etag with
           | None -> ()
-          | Some etag -> self#set_response_header "ETag" (Util.ETag.escape etag)
+          | Some etag -> self#set_response_header "ETag" (Etag.escape etag)
           end;
           (* XXX(seliopou) last modified *)
           (* XXX(seliopou) expires *)
