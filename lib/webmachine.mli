@@ -280,6 +280,12 @@ module type S = sig
         prefix. That Path will replace the previous one in the return value of 
         wrq:disp_path(ReqData) for all subsequent resource function calls in the 
         course of this request. *)
+
+    method allow_missing_post : (bool, 'body) op
+    (** If the resource accepts POST requests to nonexistent resources, then this
+        should return true.
+
+        {i Default} : false *)
   end
 
   val to_handler :

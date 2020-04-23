@@ -102,6 +102,7 @@ module type S = sig
     method finish_request : (unit, 'body) op
     method post_is_create : (bool, 'body) op
     method create_path : (string, 'body) op
+    method allow_missing_post : (bool, 'body) op
   end
 
   val to_handler :
@@ -232,12 +233,8 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       continue false rd
     method create_path (rd :'body Rd.t) : (string result * 'body Rd.t) IO.t =
       continue "" rd
-
-    (* Missing POST is not allowed rn. *
-
-    method allow_missing_post (rd :'body Rd.t) : (bool * 'body Rd.t) IO.t =
+    method allow_missing_post (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue false rd
-    *)
   end
 
   let (>>~) m f = m f
@@ -713,17 +710,16 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       self#d "v3l5";
       self#run_op resource#moved_temporarily
       >>~ function
-        | None     -> self#halt 410
+        | None     -> self#v3m5
         | Some uri ->
           self#set_response_header "location" (Uri.to_string uri);
           self#respond ~status:`Temporary_redirect ()
 
     method v3l7 : (Code.status_code * Header.t * 'body) IO.t =
-      (* XXX(seliopou): For now, no POSTs to non-existent resources allowed. *)
       self#d "v3l7";
       match self#meth with
-      | `OPTIONS -> assert false
-      | _        -> self#halt 404
+      | `POST -> self#v3m7
+      | _     -> self#halt 404
 
     method v3l13 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3l13";
@@ -773,6 +769,19 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       | `GET | `HEAD -> self#halt 304
       | _            -> self#halt 412
 
+    method v3m5 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3m5";
+      match self#meth with
+      | `POST -> self#v3n5
+      | _     -> self#halt 410
+
+    method v3m7 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3m7";
+      self#run_op resource#allow_missing_post
+      >>~ function
+        | true  -> self#v3n11
+        | false -> self#halt 404
+
     method v3m16 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3m16";
       match self#meth with
@@ -791,6 +800,13 @@ module Make(IO:IO)(Clock:CLOCK) = struct
             | false -> self#respond ~status:`Accepted ()
         else
           self#halt 500
+
+    method v3n5 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3n5";
+      self#run_op resource#allow_missing_post
+      >>~ function
+        | true  -> self#halt 410
+        | false -> self#v3n11
 
     method v3n11 : (Code.status_code * Header.t * 'body) IO.t =
       let stage2 _ =
