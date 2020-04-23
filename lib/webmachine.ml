@@ -278,14 +278,9 @@ module Make(IO:IO)(Clock:CLOCK) = struct
     method private is_redirect =
       rd.Rd.resp_redirect
 
-    method private respond ~status ?body () : (Code.status_code * Header.t * 'body) IO.t =
-      let body =
-        match body with
-        | None -> rd.Rd.resp_body
-        | Some body -> body
-      in
+    method private respond ~status () : (Code.status_code * Header.t * 'body) IO.t =
       self#run_op resource#finish_request
-      >>~ fun () -> return (status, rd.Rd.resp_headers, body)
+      >>~ fun () -> return (status, rd.Rd.resp_headers, rd.Rd.resp_body)
 
     method private halt code : (Code.status_code * Header.t * 'body) IO.t =
       let status = Code.status_of_code code in
