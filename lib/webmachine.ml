@@ -809,7 +809,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         | false -> self#halt 410
 
     method v3n11 : (Code.status_code * Header.t * 'body) IO.t =
-      let stage2 _ =
+      let stage2 (type a) (_ : a) =
         if self#is_redirect then
           match self#get_response_header "location" with
           | None   -> self#halt 500
@@ -819,20 +819,23 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       in
       self#d "v3n11";
       self#run_op resource#post_is_create >>~ function
-      | true -> 
-        self#run_op resource#create_path >>~ fun new_resource -> 
+      | true ->
+        self#run_op resource#create_path >>~ fun new_resource ->
         (* get full path, based on base uri *)
         (* set disp path on rd *)
-        let uri' = Uri.with_path self#uri (Uri.path self#uri ^ "/" ^ new_resource) in
+        let uri' =
+          Uri.with_path self#uri (Uri.path self#uri ^ "/" ^ new_resource)
+        in
         (* set location header on rd *)
         self#set_response_header "Location" (Uri.to_string uri');
-        (* call accept helper *)
         self#accept_helper stage2
-        (* respond or continue below *)
       | false ->
         self#run_op resource#process_post >>~ fun executed ->
-        if executed 
-        then begin self#encode_body; stage2 true end
+        if executed
+        then begin
+          self#encode_body;
+          stage2 ()
+        end
         else self#halt 500
 
     method v3n16 : (Code.status_code * Header.t * 'body) IO.t =
