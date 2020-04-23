@@ -805,8 +805,8 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       self#d "v3n5";
       self#run_op resource#allow_missing_post
       >>~ function
-        | true  -> self#halt 410
-        | false -> self#v3n11
+        | true  -> self#v3n11
+        | false -> self#halt 410
 
     method v3n11 : (Code.status_code * Header.t * 'body) IO.t =
       let stage2 _ =
