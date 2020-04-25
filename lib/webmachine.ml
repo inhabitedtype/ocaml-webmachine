@@ -287,16 +287,6 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       self#respond ~status ()
 
     method private choose_charset acceptable k =
-      let open Accept in
-      (* Shadow the definition in Accept because it requires that you provide a
-       * quality, which should not be included *)
-      let string_of_charset = function
-        | AnyCharset -> "*"
-        | Charset c  -> c
-      in
-      let acceptable =
-        List.map (fun (q, c) -> (q, string_of_charset c)) acceptable
-      in
       (* XXX(seliopou): This breaks the {run_op} so watch out in the even that
        * this, or {run_op} must change behavior in order to keep them
        * consistent. *)
@@ -306,7 +296,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
           rd <- rd'; k`Any
         | Ok available, rd' ->
           rd <- rd';
-          charset <- Encoding.choose ~available ~acceptable ~default:"iso-885a-1";
+          charset <- Encoding.choose_charset ~available ~acceptable;
           k (`One charset)
         | Error n, rd' ->
           rd <- rd';
