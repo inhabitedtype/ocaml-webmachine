@@ -303,25 +303,11 @@ module Make(IO:IO)(Clock:CLOCK) = struct
           self#halt n
 
     method private choose_encoding acceptable k =
-      let open Accept in
-      (* Shadow the definition in Accept because it requires that you provide a
-       * quality, which should not be included *)
-      let string_of_encoding = function
-        | AnyEncoding -> "*"
-        | Encoding e  -> e
-        | Identity    -> "identity"
-        | Gzip        -> "gzip"
-        | Compress    -> "compress"
-        | Deflate     -> "deflate"
-      in
-      let acceptable =
-        List.map (fun (q, c) -> (q, string_of_encoding c)) acceptable
-      in
       resource#encodings_provided rd
       >>= function
         | Ok available, rd' ->
           rd <- rd';
-          encoding <- Encoding.choose ~available ~acceptable ~default:"identity";
+          encoding <- Encoding.choose ~available ~acceptable;
           k encoding
         | Error n, rd' ->
           rd <- rd';
