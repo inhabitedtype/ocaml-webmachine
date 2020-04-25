@@ -36,3 +36,8 @@ val choose
   -> acceptable:(int * string) list
   -> default:string
   -> (string * 'a) option
+
+val choose_charset
+  :  available:(string * 'a) list
+  -> acceptable:(int * Cohttp.Accept.charset) list
+  -> (string * 'a) option

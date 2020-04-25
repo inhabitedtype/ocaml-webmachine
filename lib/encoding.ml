@@ -67,3 +67,19 @@ let choose ~available ~acceptable ~default =
   in
   loop available acceptable
 ;;
+
+let choose_charset ~available ~acceptable =
+  let acceptable =
+    List.map (fun (q, c) ->
+      let c =
+        match (c : Cohttp.Accept.charset) with
+        | AnyCharset -> "*"
+        | Charset c  -> c
+      in
+      q, c)
+    acceptable
+  in
+  choose
+    ~available
+    ~acceptable
+    ~default:"iso-885a-1"
