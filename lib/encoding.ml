@@ -31,7 +31,7 @@
     POSSIBILITY OF SUCH DAMAGE.
   ----------------------------------------------------------------------------*)
 
-let choose ~available ~acceptable ~default =
+let choose_actual ~available ~acceptable ~default =
   let any_prio     = List.filter (fun (_, c) -> c = "*"    ) acceptable in
   let default_prio = List.filter (fun (_, c) -> c = default) acceptable in
   let default_ok =
@@ -79,7 +79,28 @@ let choose_charset ~available ~acceptable =
       q, c)
     acceptable
   in
-  choose
+  choose_actual
     ~available
     ~acceptable
     ~default:"iso-885a-1"
+;;
+
+let choose ~available ~acceptable =
+  let acceptable =
+    List.map (fun (q, c) ->
+      let c =
+        match (c : Cohttp.Accept.encoding) with
+        | AnyEncoding -> "*"
+        | Encoding e  -> e
+        | Identity    -> "identity"
+        | Gzip        -> "gzip"
+        | Compress    -> "compress"
+        | Deflate     -> "deflate"
+      in
+      q, c)
+    acceptable
+  in
+  choose_actual
+    ~available
+    ~acceptable
+    ~default:"identity"

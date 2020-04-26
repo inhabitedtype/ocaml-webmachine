@@ -33,8 +33,7 @@
 
 val choose
   :  available:(string * 'a) list
-  -> acceptable:(int * string) list
-  -> default:string
+  -> acceptable:(int * Cohttp.Accept.encoding) list
   -> (string * 'a) option
 
 val choose_charset
