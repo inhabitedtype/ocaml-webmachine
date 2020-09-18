@@ -116,6 +116,8 @@ class test_resource = object
   val _expires = ref None
   val _generate_etag = ref None
   val _finish_request = ref ()
+  val _post_is_create = ref false
+  val _create_path = ref ""
 
   method resource_exists rd =
     Webmachine.continue !_resource_exits rd
@@ -173,6 +175,10 @@ class test_resource = object
     Webmachine.continue !_generate_etag rd
   method finish_request rd =
     Webmachine.continue !_finish_request rd
+  method post_is_create rd =
+    Webmachine.continue !_post_is_create rd
+  method create_path rd =
+    Webmachine.continue !_create_path rd
 
   method set_resource_exists v =
     _resource_exits := v
@@ -230,6 +236,10 @@ class test_resource = object
     _generate_etag := v
   method set_finish_request v =
     _finish_request := v
+  method set_post_is_create v =
+    _post_is_create := v
+  method set_create_path v =
+    _create_path := v
 
 end
 
@@ -1124,7 +1134,23 @@ see_other_n11_resource_calls_base_uri(Value) ->
     ExpectedDecisionTrace = ?PATH_TO_N11_VIA_M7_NO_ACPTHEAD,
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
+*)
 
+let created_n11_resource () =
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods [`GET; `POST; `PUT];
+    resource#set_resource_exists true;
+    resource#set_post_is_create true;
+    resource#set_content_types_accepted ["text/html", of_plain];
+    resource#set_create_path "new1";
+    let headers = Header.of_list ["Content-Type", "text/html"] in
+    Request.make ~headers ~meth:`POST Uri.(of_string "/foo")
+  end in
+  assert_status ~msg:"201 via n11" result 201;
+  assert_header ~msg:"201 via n11 sets location header" result "Location" "/foo/new1";
+;;
+
+(*
 %% 303 result via N5
 see_other_n5() ->
     put_setting(allowed_methods, ['GET', 'POST', 'PUT']),
@@ -1150,20 +1176,21 @@ not_found_l7() ->
     ExpectedDecisionTrace = ?PATH_TO_L7_NO_ACPTHEAD,
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
+*)
 
-%% 404 result via M7
-not_found_m7() ->
-    put_setting(allowed_methods, ['GET', 'POST', 'PUT']),
-    put_setting(resource_exists, false),
-    ContentType = "text/html",
-    put_setting(content_types_accepted, [{ContentType, to_html}]),
-    PostRequest = {url("post"), [], ContentType, "foo"},
-    {ok, Result} = httpc:request(post, PostRequest, [], []),
-    ?assertMatch({{"HTTP/1.1", 404, "Object Not Found"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_M7_NO_ACPTHEAD,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
+let not_found_m7 () =
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods [`GET; `POST; `PUT];
+    resource#set_resource_exists false;
+    resource#set_content_types_accepted ["text/html", of_plain];
+    let headers = Header.of_list ["Content-Type", "text/html"] in
+    Request.make ~headers ~meth:`POST Uri.(of_string "/foo")
+  end in
+  assert_status ~msg:"404 via m7" result 404;
+  assert_path ~msg:"404 path via m7" result Path.to_m7_no_acpthead;
+;;
 
+(*
 %% 201 result via P11 from POST
 created_p11_post() ->
     put_setting(allowed_methods, ['GET', 'POST', 'PUT']),
@@ -1221,32 +1248,33 @@ conflict_o14() ->
     ExpectedDecisionTrace = ?PATH_TO_O14_NO_ACPTHEAD,
     ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
     ok.
+*)
 
-%% 410 result via M5
-gone_m5() ->
-    put_setting(allowed_methods, ?DEFAULT_ALLOWED_METHODS),
-    put_setting(resource_exists, false),
-    put_setting(previously_existed, true),
-    {ok, Result} = httpc:request(get, {url("gone"), []}, [], []),
-    ?assertMatch({{"HTTP/1.1", 410, "Gone"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_M5_NO_ACPTHEAD,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
 
-%% 410 result via N5
-gone_n5() ->
-    put_setting(allowed_methods, ['GET', 'POST', 'PUT']),
-    ContentType = "text/html",
-    put_setting(content_types_accepted, [{ContentType, to_html}]),
-    put_setting(resource_exists, false),
-    put_setting(previously_existed, true),
-    PostRequest = {url("post"), [], ContentType, "foo"},
-    {ok, Result} = httpc:request(post, PostRequest, [], []),
-    ?assertMatch({{"HTTP/1.1", 410, "Gone"}, _, _}, Result),
-    ExpectedDecisionTrace = ?PATH_TO_N5_NO_ACPTHEAD,
-    ?assertEqual(ExpectedDecisionTrace, get_decision_ids()),
-    ok.
+let gone_m5 () =
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods default_allowed_methods;
+    resource#set_resource_exists false;
+    resource#set_previously_existed true;
+    Request.make Uri.(of_string "/gone")
+  end in
+  assert_path ~msg:"410 via m5" result Path.to_m5_no_acpthead;
+  assert_status ~msg:"410 via m5" result 410;
+;;
 
+let gone_n5 () =
+  let result = with_test_resource begin fun resource ->
+    resource#set_allowed_methods [`GET ; `POST ; `PUT];
+    resource#set_resource_exists false;
+    resource#set_previously_existed true;
+    let headers = Header.init_with "Content-Type" "text/html" in
+    Request.make ~headers ~meth:`POST Uri.(of_string "/post")
+  end in
+  assert_path ~msg:"410 via n5" result Path.to_n5_no_acpthead;
+  assert_status ~msg:"410 via n5" result 410;
+;;
+
+(*
 %% 202 result via M20 - The delete has been "accepted" but it didn't actually
 %% happen (or, rather, may or may not happen in the future)
 accepted_m20() ->
@@ -1509,7 +1537,11 @@ let _ =
     "not modified j18 multiple if-none-match first" >:: not_modified_j18_multiple_if_none_match_first;
     "not modified j18 multiple if-none-match second" >:: not_modified_j18_multiple_if_none_match;
     "not modified j18 via h12" >:: not_modified_j18_via_h12;
-    "create_p11_put" >:: create_p11_put
+    "not found m7" >:: not_found_m7;
+    "create_p11_put" >:: create_p11_put;
+    "created_n11_resource" >:: created_n11_resource;
+    "gone m5" >:: gone_m5;
+    "gone n5" >:: gone_n5;
   ] in
   let suite = (Printf.sprintf "test logic") >::: tests in
   let verbose = ref false in

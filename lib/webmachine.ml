@@ -100,6 +100,9 @@ module type S = sig
     method expires : (string option, 'body) op
     method generate_etag : (string option, 'body) op
     method finish_request : (unit, 'body) op
+    method post_is_create : (bool, 'body) op
+    method create_path : (string, 'body) op
+    method allow_missing_post : (bool, 'body) op
   end
 
   val to_handler :
@@ -226,16 +229,12 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       continue None rd
     method finish_request (rd :'body Rd.t) : (unit result * 'body Rd.t) IO.t =
       continue () rd
-
-    (* Missing POST is not allowed rn. *
-
-    method post_is_create (rd :'body rd) : (bool * 'body rd) IO.result =
+    method post_is_create (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
       continue false rd
-    method allow_missing_post (rd :'body rd) : (bool * 'body rd) IO.result =
-      continue false rd
-    method create_path (rd :'body rd) : (string * 'body rd) IO.result =
+    method create_path (rd :'body Rd.t) : (string result * 'body Rd.t) IO.t =
       continue "" rd
-    *)
+    method allow_missing_post (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
+      continue false rd
   end
 
   let (>>~) m f = m f
@@ -265,6 +264,9 @@ module Make(IO:IO)(Clock:CLOCK) = struct
     (** [#meth] returns the [Code.meth] of the [Request.t] object. *)
     method private meth =
       rd.Rd.meth
+
+    method private uri =
+      rd.Rd.uri
 
     method private set_response_header k v =
       rd <- Rd.with_resp_headers (fun headers -> Header.replace headers k v) rd
@@ -681,7 +683,6 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         | false -> self#v3l7
 
     method v3k5 : (Code.status_code * Header.t * 'body) IO.t =
-      (* XXX(seliopou): For now, no POSTs to non-existent resources allowed. *)
       self#d "v3k5";
       self#run_op resource#moved_permanently
       >>~ function
@@ -709,17 +710,16 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       self#d "v3l5";
       self#run_op resource#moved_temporarily
       >>~ function
-        | None     -> self#halt 410
+        | None     -> self#v3m5
         | Some uri ->
           self#set_response_header "location" (Uri.to_string uri);
           self#respond ~status:`Temporary_redirect ()
 
     method v3l7 : (Code.status_code * Header.t * 'body) IO.t =
-      (* XXX(seliopou): For now, no POSTs to non-existent resources allowed. *)
       self#d "v3l7";
       match self#meth with
-      | `OPTIONS -> assert false
-      | _        -> self#halt 404
+      | `POST -> self#v3m7
+      | _     -> self#halt 404
 
     method v3l13 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3l13";
@@ -769,6 +769,19 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       | `GET | `HEAD -> self#halt 304
       | _            -> self#halt 412
 
+    method v3m5 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3m5";
+      match self#meth with
+      | `POST -> self#v3n5
+      | _     -> self#halt 410
+
+    method v3m7 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3m7";
+      self#run_op resource#allow_missing_post
+      >>~ function
+        | true  -> self#v3n11
+        | false -> self#halt 404
+
     method v3m16 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3m16";
       match self#meth with
@@ -788,20 +801,42 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         else
           self#halt 500
 
+    method v3n5 : (Code.status_code * Header.t * 'body) IO.t =
+      self#d "v3n5";
+      self#run_op resource#allow_missing_post
+      >>~ function
+        | true  -> self#v3n11
+        | false -> self#halt 410
+
     method v3n11 : (Code.status_code * Header.t * 'body) IO.t =
+      let stage2 (type a) (_ : a) =
+        if self#is_redirect then
+          match self#get_response_header "location" with
+          | None   -> self#halt 500
+          | Some _ -> self#respond ~status:`See_other ()
+        else
+          self#v3p11
+      in
       self#d "v3n11";
-      self#run_op resource#process_post
-      >>~ fun executed ->
-        if executed then begin
+      self#run_op resource#post_is_create >>~ function
+      | true ->
+        self#run_op resource#create_path >>~ fun new_resource ->
+        (* get full path, based on base uri *)
+        (* set disp path on rd *)
+        let uri' =
+          Uri.with_path self#uri (Uri.path self#uri ^ "/" ^ new_resource)
+        in
+        (* set location header on rd *)
+        self#set_response_header "Location" (Uri.to_string uri');
+        self#accept_helper stage2
+      | false ->
+        self#run_op resource#process_post >>~ fun executed ->
+        if executed
+        then begin
           self#encode_body;
-          if self#is_redirect then
-            match self#get_response_header "location" with
-            | None   -> self#halt 500
-            | Some _ -> self#respond ~status:`See_other ()
-          else
-            self#v3p11
-        end else
-          self#halt 500
+          stage2 ()
+        end
+        else self#halt 500
 
     method v3n16 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3n16";

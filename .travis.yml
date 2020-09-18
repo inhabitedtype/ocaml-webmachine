@@ -12,4 +12,3 @@ env:
   - PACKAGE="webmachine" DISTRO="debian-stable"   OCAML_VERSION="4.05.0" POST_INSTALL_HOOK="./.travis-examples.sh"
   - PACKAGE="webmachine" DISTRO="ubuntu-16.04"    OCAML_VERSION="4.04.2" POST_INSTALL_HOOK="./.travis-examples.sh"
   - PACKAGE="webmachine" DISTRO="alpine"          OCAML_VERSION="4.03.0"
-  - PACKAGE="webmachine" DISTRO="debian-unstable" OCAML_VERSION="4.03.0"
