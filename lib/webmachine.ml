@@ -917,17 +917,18 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
   let dispatch table =
     let table =
-      List.map (fun (p, t, mk_resource) ->
-        (p, t, fun path_info dispatch_path ~body ~request ->
-          let resource = mk_resource () in
-          to_handler ?dispatch_path ~path_info ~resource ~body ~request ()))
-      table
+      Dispatch.create
+        (List.map (fun (p, t, mk_resource) ->
+             (p, t, fun path_info dispatch_path ~body ~request ->
+                 let resource = mk_resource () in
+                 to_handler ?dispatch_path ~path_info ~resource ~body ~request ()))
+            table)
     in
     fun ~body ~request ->
       let path = Uri.path (Cohttp.Request.uri request) in
       match Dispatch.dispatch table path with
-      | Result.Error _    -> return None
-      | Result.Ok handler -> handler ~body ~request >>= fun x -> return (Some x)
+      | None -> return None
+      | Some handler -> handler ~body ~request >>= fun x -> return (Some x)
 
   let dispatch' table =
     dispatch (List.map (fun (m, r) ->
