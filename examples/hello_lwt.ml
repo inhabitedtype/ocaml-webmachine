@@ -125,6 +125,7 @@ let main () =
         (Code.string_of_method (Request.meth request))
         (Uri.path (Request.uri request))
         path;
+        flush stderr;
       (* Finally, send the response to the client *)
       Server.respond ~headers ~body ~status ()
   in
