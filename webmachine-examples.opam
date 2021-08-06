@@ -16,5 +16,7 @@ depends: [
   "cohttp-async"
   "lwt"
   "cohttp-lwt-unix"
+  "ounit" {with-test & >= "1.0.2"}
+  "dune" {>= "1.0"}
 ]
 synopsis: "Webmachine examples"

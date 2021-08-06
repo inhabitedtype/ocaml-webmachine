@@ -18,6 +18,7 @@ depends: [
   "ounit" {with-test & >= "1.0.2"}
   "js_of_ocaml" {with-test}
   "re" {>= "1.7.2"}
+  "uri" {>= "2.0.0"}
 ]
 synopsis: "A REST toolkit for OCaml"
 description: """
