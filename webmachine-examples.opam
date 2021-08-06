@@ -10,20 +10,13 @@ build: [
   ["dune" "runtest" "-p" name "-j" jobs] {with-test}
 ]
 depends: [
-  "ocaml" {>= "4.03.0"}
-  "ptime" {>= "0.8.0"}
-  "cohttp" {>= "1.0.0"}
-  "dispatch" {>= "0.5.0"}
-  "dune" {>= "1.0"}
+  "webmachine"
+  "async"
+  "core"
+  "cohttp-async"
+  "lwt"
+  "cohttp-lwt-unix"
   "ounit" {with-test & >= "1.0.2"}
-  "js_of_ocaml" {with-test}
-  "re" {>= "1.7.2"}
-  "uri" {>= "2.0.0"}
+  "dune" {>= "1.0"}
 ]
-synopsis: "A REST toolkit for OCaml"
-description: """
-OCaml webmachine is a layer on top of cohttp that implements a
-state-machine-based HTTP request processor. It's particularly
-well-suited for writing RESTful APIs. As the name suggests, this is an
-OCaml port of the webmachine project.
-"""
+synopsis: "Webmachine examples"
