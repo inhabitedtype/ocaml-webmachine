@@ -39,7 +39,7 @@
 
     To use this module, apply the {{!Make}[Make]} functor to an {{!IO}[IO]}
     and a {{!CLOCK}[CLOCK]} module, and subclass the
-    {{!classtype:S.resource}resouce} virtual class. *)
+    {{!class-type:S.resource}resouce} virtual class. *)
 
 open Cohttp
 
