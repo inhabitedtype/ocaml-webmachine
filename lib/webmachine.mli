@@ -288,20 +288,25 @@ module type S = sig
         {i Default} : false *)
   end
 
-  val to_handler :
-    ?dispatch_path:string -> ?path_info:(string * string) list ->
-    resource:('body resource) -> body:'body -> request:Request.t -> unit ->
-    (Code.status_code * Header.t * 'body * string list) io
+  val to_handler
+    :  ?dispatch_path:string
+    -> ?path_info:(string * string) list
+    -> resource:('body resource)
+    -> body:'body
+    -> request:Request.t
+    -> unit
+    -> (Code.status_code * Header.t * 'body * string list) io
   (** [to_handler ~resource ~body ~request ()] runs the resource through the
       HTTP decision diagram given [body] and [request]. The result is a tuple
       that contains the status code, headers and body of the response. The
       final element of the tuple is a list of decision diagram node names that
       is useful for debugging. *)
 
-  val dispatch :
-    ((Dispatch.tag * string) list * Dispatch.typ * (unit -> 'body resource)) list ->
-    body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option io
+  val dispatch
+    :  ((Dispatch.tag * string) list * Dispatch.typ * (unit -> 'body resource)) list
+    -> body:'body
+    -> request:Request.t
+    -> (Code.status_code * Header.t * 'body * string list) option io
   (** [dispatch routes] returns a request handler that will iterate through
       [routes] and dispatch the request to the first resources that matches the
       URI path. The form that the individal route entries takes this the
@@ -321,10 +326,11 @@ module type S = sig
       route tuple is [`Exact].
    *)
 
-  val dispatch' :
-    (string * (unit -> 'body resource)) list ->
-    body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option io
+  val dispatch'
+    :  (string * (unit -> 'body resource)) list
+    -> body:'body
+    -> request:Request.t
+    -> (Code.status_code * Header.t * 'body * string list) option io
   (** [dispatch' routes ~body ~request] works in the same way as {dispatch'}
       except the user can specify path patterns using a string shorthand. For
       example, the following route entry:

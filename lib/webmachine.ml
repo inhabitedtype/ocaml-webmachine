@@ -105,20 +105,26 @@ module type S = sig
     method allow_missing_post : (bool, 'body) op
   end
 
-  val to_handler :
-    ?dispatch_path:string -> ?path_info:(string * string) list ->
-    resource:('body resource) -> body:'body -> request:Request.t -> unit ->
-    (Code.status_code * Header.t * 'body * string list) io
+  val to_handler
+    :  ?dispatch_path:string
+    -> ?path_info:(string * string) list
+    -> resource:('body resource)
+    -> body:'body
+    -> request:Request.t
+    -> unit
+    -> (Code.status_code * Header.t * 'body * string list) io
 
-  val dispatch :
-    ((Dispatch.tag * string) list * Dispatch.typ * (unit -> 'body resource)) list ->
-    body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option io
+  val dispatch
+    :  ((Dispatch.tag * string) list * Dispatch.typ * (unit -> 'body resource)) list
+    -> body:'body
+    -> request:Request.t
+    -> (Code.status_code * Header.t * 'body * string list) option io
 
-  val dispatch' :
-    (string * (unit -> 'body resource)) list ->
-    body:'body -> request:Request.t ->
-    (Code.status_code * Header.t * 'body * string list) option io
+  val dispatch'
+    :  (string * (unit -> 'body resource)) list
+    -> body:'body
+    -> request:Request.t
+    -> (Code.status_code * Header.t * 'body * string list) option io
 end
 
 let default_variances =
