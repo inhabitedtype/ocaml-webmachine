@@ -277,10 +277,6 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       in
       state.rd <- { state.rd with Rd.resp_body = ef (cf state.rd.resp_body) }
 
-    (** [#meth] returns the [Code.meth] of the [Request.t] object. *)
-    method private meth =
-      state.rd.meth
-
     method private uri =
       state.rd.uri
 
@@ -387,12 +383,11 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3b12 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3b12";
-      let meth = self#meth in
       self#run_op resource#known_methods
       >>~ fun (meths:Code.meth list) ->
-        if List.exists (fun x -> Code.compare_method meth x = 0) meths
-          then self#v3b11
-          else self#halt 501
+        if List.exists (fun x -> Code.compare_method state.rd.meth x = 0) meths
+        then self#v3b11
+        else self#halt 501
 
     method v3b11 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3b11";
@@ -403,16 +398,14 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3b10 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3b10";
-      let meth = self#meth in
       self#run_op resource#allowed_methods
       >>~ fun (meths:Code.meth list) ->
-        if List.exists (fun x -> Code.compare_method meth x = 0) meths then
-          self#v3b9
-        else begin
+        if List.exists (fun x -> Code.compare_method state.rd.meth x = 0) meths
+        then self#v3b9
+        else (
           let allow = String.concat "," (List.map Code.string_of_method meths) in
           self#set_response_header "allow" allow;
-          self#halt 405
-        end
+          self#halt 405)
 
     method v3b9 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3b9";
@@ -480,7 +473,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3b3 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3b3";
-      match self#meth with
+      match state.rd.meth with
       | `OPTIONS ->
         self#run_op resource#options
         >>~ fun headers ->
@@ -673,7 +666,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3i7 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3i7";
-      match self#meth with
+      match state.rd.meth with
       | `OPTIONS -> assert false
       | `PUT     -> self#v3i4
       | _        -> self#v3k7
@@ -733,7 +726,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3l7 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3l7";
-      match self#meth with
+      match state.rd.meth with
       | `POST -> self#v3m7
       | _     -> self#halt 404
 
@@ -781,13 +774,13 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3j18 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3j18";
-      match self#meth with
+      match state.rd.meth with
       | `GET | `HEAD -> self#halt 304
       | _            -> self#halt 412
 
     method v3m5 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3m5";
-      match self#meth with
+      match state.rd.meth with
       | `POST -> self#v3n5
       | _     -> self#halt 410
 
@@ -800,7 +793,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3m16 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3m16";
-      match self#meth with
+      match state.rd.meth with
       | `OPTIONS -> assert false
       | `DELETE  -> self#v3m20
       | _        -> self#v3n16
@@ -856,7 +849,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3n16 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3n16";
-      match self#meth with
+      match state.rd.meth with
       | `OPTIONS | `DELETE -> assert false
       | `POST -> self#v3n11
       | _     -> self#v3o16
@@ -870,14 +863,14 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3o16 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3o16";
-      match self#meth with
+      match state.rd.meth with
       | `OPTIONS | `DELETE | `POST -> assert false
       | `PUT -> self#v3o14
       | _    -> self#v3o18
 
     method v3o18 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3o18";
-      match self#meth with
+      match state.rd.meth with
       (* The HTTP method could be POST if the request comes via v3o20 *)
       | `OPTIONS     -> assert false
       | `HEAD | `GET ->
