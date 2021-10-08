@@ -277,9 +277,6 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       in
       state.rd <- { state.rd with Rd.resp_body = ef (cf state.rd.resp_body) }
 
-    method private uri =
-      state.rd.uri
-
     method private set_response_header k v =
       state.rd <- Rd.with_resp_headers (fun headers -> Header.replace headers k v) state.rd
 
@@ -829,8 +826,9 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         self#run_op resource#create_path >>~ fun new_resource ->
         (* get full path, based on base uri *)
         (* set disp path on rd *)
+        let uri = state.rd.uri in
         let uri' =
-          Uri.with_path self#uri (Uri.path self#uri ^ "/" ^ new_resource)
+          Uri.with_path uri (Uri.path uri ^ "/" ^ new_resource)
         in
         (* set location header on rd *)
         self#set_response_header "Location" (Uri.to_string uri');
