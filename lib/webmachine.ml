@@ -239,50 +239,66 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
   let (>>~) m f = m f
 
-  class ['body] logic ~(resource:'body resource) ~(rd:'body Rd.t) () = object(self)
+  (* Decision State *)
+  module DS = struct
+
+    type 'body t =
+      { mutable path : string list
+      ; mutable rd : 'body Rd.t
+      ; mutable content_type : (string * 'body provider) option
+      ; mutable charset : (string * ('body -> 'body))  option
+      ; mutable encoding : (string * ('body -> 'body)) option
+      }
+
+    let create rd =
+      { path = []
+      ; rd
+      ; content_type = None
+      ; charset = None
+      ; encoding = None
+      }
+  end
+
+  class ['body] logic ~(resource:'body resource) ~rd:(initial_rd:'body Rd.t) () = object(self)
     constraint 'body = [> `Empty]
 
-    val mutable path = ([] : string list)
-    val mutable rd = rd
-    val mutable content_type = None
-    val mutable charset = None
-    val mutable encoding = None
+    val state = DS.create initial_rd
 
     method private encode_body =
       let cf =
-        match charset with
+        match state.charset with
         | None        -> fun x -> x
         | Some (_, f) ->  f
       in
       let ef =
-        match encoding with
+        match state.encoding with
         | None        -> fun x -> x
         | Some (_, f) -> f
       in
-      rd <- { rd with Rd.resp_body = ef (cf rd.Rd.resp_body) }
+      state.rd <- { state.rd with Rd.resp_body = ef (cf state.rd.resp_body) }
 
     (** [#meth] returns the [Code.meth] of the [Request.t] object. *)
     method private meth =
-      rd.Rd.meth
+      state.rd.meth
 
     method private uri =
-      rd.Rd.uri
+      state.rd.uri
 
     method private set_response_header k v =
-      rd <- Rd.with_resp_headers (fun headers -> Header.replace headers k v) rd
+      state.rd <- Rd.with_resp_headers (fun headers -> Header.replace headers k v) state.rd
 
     method private get_request_header k =
-      Header.get rd.Rd.req_headers k
+      Header.get state.rd.req_headers k
 
     method private get_response_header k =
-      Header.get rd.Rd.resp_headers k
+      Header.get state.rd.resp_headers k
 
     method private is_redirect =
-      rd.Rd.resp_redirect
+      state.rd.resp_redirect
 
     method private respond ~status () : (Code.status_code * Header.t * 'body) IO.t =
       self#run_op resource#finish_request
-      >>~ fun () -> return (status, rd.Rd.resp_headers, rd.Rd.resp_body)
+      >>~ fun () -> return (status, state.rd.resp_headers, state.rd.resp_body)
 
     method private halt code : (Code.status_code * Header.t * 'body) IO.t =
       let status = Code.status_of_code code in
@@ -292,51 +308,51 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       (* XXX(seliopou): This breaks the {run_op} so watch out in the even that
        * this, or {run_op} must change behavior in order to keep them
        * consistent. *)
-      resource#charsets_provided rd
+      resource#charsets_provided state.rd
       >>= function
         | Ok [], rd' ->
-          rd <- rd'; k`Any
+          state.rd <- rd'; k`Any
         | Ok available, rd' ->
-          rd <- rd';
-          charset <- Encoding.choose_charset ~available ~acceptable;
-          k (`One charset)
+          state.rd <- rd';
+          state.charset <- Encoding.choose_charset ~available ~acceptable;
+          k (`One state.charset)
         | Error n, rd' ->
-          rd <- rd';
+          state.rd <- rd';
           self#halt n
 
     method private choose_encoding acceptable k =
-      resource#encodings_provided rd
+      resource#encodings_provided state.rd
       >>= function
         | Ok available, rd' ->
-          rd <- rd';
-          encoding <- Encoding.choose ~available ~acceptable;
-          k encoding
+          state.rd <- rd';
+          state.encoding <- Encoding.choose ~available ~acceptable;
+          k state.encoding
         | Error n, rd' ->
-          rd <- rd';
+          state.rd <- rd';
           self#halt n
 
     (** [run_op op] runs [op] with the current request and response
         information, and will perform any appropriate bookkeeping that needs to
         be done given the result. *)
     method private run_op : 'a. ('a, 'body) op -> ('a -> (Code.status_code * Header.t * 'body) IO.t) -> (Code.status_code * Header.t * 'body) IO.t =
-      fun op k -> op rd
+      fun op k -> op state.rd
         >>= function
           | Ok a, rd' ->
-            rd <- rd';
+            state.rd <- rd';
             k a
           | Error n, rd' ->
-            rd <- rd';
+            state.rd <- rd';
             self#halt n
 
     method private run_provider : 'body provider -> _ -> (Code.status_code * Header.t * 'body) IO.t =
       fun provider k ->
-        provider rd
+        provider state.rd
         >>= function
           | Ok resp_body, rd' ->
-            rd <- { rd' with Rd.resp_body };
+            state.rd <- { rd' with Rd.resp_body };
             k ()
           | Error n , rd' ->
-            rd <- rd';
+            state.rd <- rd';
             self#halt n
 
     method private accept_helper k =
@@ -356,11 +372,11 @@ module Make(IO:IO)(Clock:CLOCK) = struct
               self#encode_body;
             k complete
 
-    method private d state =
-      path <- state :: path
+    method private d n =
+      state.path <- n :: state.path
 
     method run : (Code.status_code * Header.t * 'body * string list) IO.t =
-      self#v3b13 >>= fun (code, headers, body) -> return (code, headers, body, List.rev path)
+      self#v3b13 >>= fun (code, headers, body) -> return (code, headers, body, List.rev state.path)
 
     method v3b13 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3b13";
@@ -431,7 +447,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
           self#set_response_header "WWW-Authenticate" challenge;
           self#halt 401
         | `Redirect uri ->
-          rd <- Rd.redirect Uri.(to_string uri) rd;
+          state.rd <- Rd.redirect Uri.(to_string uri) state.rd;
           self#halt 303
 
     method v3b7 : (Code.status_code * Header.t * 'body) IO.t =
@@ -481,7 +497,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
           begin match content_types with
           | []   -> self#halt 500
           | t::_ ->
-            content_type <- Some t;
+            state.content_type <- Some t;
             self#v3d4
           end
         | Some _ -> self#v3c4
@@ -494,7 +510,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         match Mediatype.match_header content_types header with
         | None   -> self#halt 406
         | Some t ->
-          content_type <- Some t;
+          state.content_type <- Some t;
           self#v3d4
 
     method v3d4 : (Code.status_code * Header.t * 'body) IO.t =
@@ -537,12 +553,12 @@ module Make(IO:IO)(Clock:CLOCK) = struct
     method v3f6 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3f6";
       let type_ =
-        match content_type with
+        match state.content_type with
         | None            -> assert false
         | Some (type_, _) -> type_
       in
       let value =
-        match charset with
+        match state.charset with
         | None             -> type_
         | Some (charset,_) -> Printf.sprintf "%s; charset=%s" type_ charset
       in
@@ -866,7 +882,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       | `OPTIONS     -> assert false
       | `HEAD | `GET ->
         let _, to_content =
-          match content_type with
+          match state.content_type with
           | None   -> assert false
           | Some x -> x
         in
@@ -891,7 +907,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3o20 : (Code.status_code * Header.t * 'body) IO.t =
       self#d "v3o20";
-      match rd.Rd.resp_body with
+      match state.rd.resp_body with
       | `Empty -> self#respond ~status:`No_content ()
       | _      -> self#v3o18
 
