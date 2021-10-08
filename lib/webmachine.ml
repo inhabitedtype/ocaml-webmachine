@@ -289,9 +289,6 @@ module Make(IO:IO)(Clock:CLOCK) = struct
     method private get_response_header k =
       Header.get state.rd.resp_headers k
 
-    method private is_redirect =
-      state.rd.resp_redirect
-
     method private respond ~status () : (Code.status_code * Header.t * 'body) IO.t =
       self#run_op resource#finish_request
       >>~ fun () -> return (status, state.rd.resp_headers, state.rd.resp_body)
@@ -819,12 +816,12 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3n11 : (Code.status_code * Header.t * 'body) IO.t =
       let stage2 (type a) (_ : a) =
-        if self#is_redirect then
-          match self#get_response_header "location" with
-          | None   -> self#halt 500
-          | Some _ -> self#respond ~status:`See_other ()
-        else
-          self#v3p11
+        if state.rd.resp_redirect
+        then
+          (match self#get_response_header "location" with
+           | None   -> self#halt 500
+           | Some _ -> self#respond ~status:`See_other ())
+        else self#v3p11
       in
       self#d "v3n11";
       self#run_op resource#post_is_create >>~ function
