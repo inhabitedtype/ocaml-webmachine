@@ -266,6 +266,10 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     let get_request_header t k = Header.get t.rd.req_headers k
     let get_response_header t k = Header.get t.rd.resp_headers k
+    let set_response_header t k v =
+      t.rd <- Rd.with_resp_headers (fun headers -> Header.replace headers k v) t.rd
+    ;;
+
     let push_path t n = t.path <- n :: t.path
   end
 
@@ -286,9 +290,6 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         | Some (_, f) -> f
       in
       state.rd <- { state.rd with Rd.resp_body = ef (cf state.rd.resp_body) }
-
-    method private set_response_header k v =
-      state.rd <- Rd.with_resp_headers (fun headers -> Header.replace headers k v) state.rd
 
     method private respond ~status () : (Code.status_code * Header.t * 'body) IO.t =
       self#run_op resource#finish_request
@@ -399,7 +400,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         then self#v3b9
         else (
           let allow = String.concat "," (List.map Code.string_of_method meths) in
-          self#set_response_header "allow" allow;
+          DS.set_response_header state "allow" allow;
           self#halt 405)
 
     method v3b9 : (Code.status_code * Header.t * 'body) IO.t =
@@ -415,7 +416,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       >>~ function
         | `Authorized -> self#v3b7
         | `Basic realm ->
-          self#set_response_header "WWW-Authenticate" ("Basic realm=\"" ^ realm ^ "\"");
+          DS.set_response_header state "WWW-Authenticate" ("Basic realm=\"" ^ realm ^ "\"");
           self#halt 401
         | `Challenge auth ->
           let challenge =
@@ -432,7 +433,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
             List.iter add_kv auth.params;
             Buffer.contents buffer
           in
-          self#set_response_header "WWW-Authenticate" challenge;
+          DS.set_response_header state "WWW-Authenticate" challenge;
           self#halt 401
         | `Redirect uri ->
           state.rd <- Rd.redirect Uri.(to_string uri) state.rd;
@@ -472,7 +473,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       | `OPTIONS ->
         self#run_op resource#options
         >>~ fun headers ->
-          List.iter (fun (k, v) -> self#set_response_header k v) headers;
+          List.iter (fun (k, v) -> DS.set_response_header state k v) headers;
           self#respond ~status:`OK ()
       | _ -> self#v3c3
 
@@ -550,7 +551,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         | None             -> type_
         | Some (charset,_) -> Printf.sprintf "%s; charset=%s" type_ charset
       in
-      self#set_response_header "Content-Type" value;
+      DS.set_response_header state "Content-Type" value;
       match DS.get_request_header state "accept-encoding" with
       | None ->
         let acceptable = Accept.encodings (Some "identity;q=1.0,*;q=0.5") in
@@ -579,7 +580,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       let variances = variances @ default_variances in
       begin match String.concat ", " variances with
       | ""   -> ()
-      | vary -> self#set_response_header "vary" vary
+      | vary -> DS.set_response_header state "vary" vary
       end;
       self#run_op resource#resource_exists
       >>~ function
@@ -656,7 +657,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       >>~ function
         | None     -> self#v3p3
         | Some uri ->
-          self#set_response_header "Location" (Uri.to_string uri);
+          DS.set_response_header state "Location" (Uri.to_string uri);
           self#respond ~status:`Moved_permanently ()
 
     method v3i7 : (Code.status_code * Header.t * 'body) IO.t =
@@ -692,7 +693,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       >>~ function
         | None     -> self#v3l5
         | Some uri ->
-          self#set_response_header "location" (Uri.to_string uri);
+          DS.set_response_header state "location" (Uri.to_string uri);
           self#respond ~status:`Moved_permanently ()
 
     method v3k13 : (Code.status_code * Header.t * 'body) IO.t =
@@ -716,7 +717,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       >>~ function
         | None     -> self#v3m5
         | Some uri ->
-          self#set_response_header "location" (Uri.to_string uri);
+          DS.set_response_header state "location" (Uri.to_string uri);
           self#respond ~status:`Temporary_redirect ()
 
     method v3l7 : (Code.status_code * Header.t * 'body) IO.t =
@@ -832,7 +833,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
           Uri.with_path uri (Uri.path uri ^ "/" ^ new_resource)
         in
         (* set location header on rd *)
-        self#set_response_header "Location" (Uri.to_string uri');
+        DS.set_response_header state "Location" (Uri.to_string uri');
         self#accept_helper stage2
       | false ->
         self#run_op resource#process_post >>~ fun executed ->
@@ -878,7 +879,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         self#run_op resource#generate_etag >>~ fun etag ->
           begin match etag with
           | None -> ()
-          | Some etag -> self#set_response_header "ETag" (Etag.escape etag)
+          | Some etag -> DS.set_response_header state "ETag" (Etag.escape etag)
           end;
           (* XXX(seliopou) last modified *)
           (* XXX(seliopou) expires *)
