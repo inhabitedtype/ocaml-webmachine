@@ -157,6 +157,8 @@ module Make(IO:IO)(Clock:CLOCK) = struct
     | `Redirect of Uri.t
     ]
 
+  let (>>|) m f = m >>= fun x -> return (f x)
+
   let (>>=?) m f =
     m >>= function
     | Ok x, rd       -> f x rd
@@ -284,6 +286,13 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       let ef = option_value_map ~default:identity ~f:snd t.encoding in
       t.rd <- { t.rd with Rd.resp_body = ef (cf t.rd.resp_body) }
     ;;
+
+    let run t f =
+      f t.rd
+      >>| fun (result, rd) ->
+      t.rd <- rd;
+      result
+    ;;
   end
 
   class ['body] logic ~(resource:'body resource) ~rd:(initial_rd:'body Rd.t) () = object(self)
@@ -303,52 +312,40 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       (* XXX(seliopou): This breaks the {run_op} so watch out in the even that
        * this, or {run_op} must change behavior in order to keep them
        * consistent. *)
-      resource#charsets_provided state.rd
+      DS.run state resource#charsets_provided
       >>= function
-        | Ok [], rd' ->
-          state.rd <- rd'; k`Any
-        | Ok available, rd' ->
-          state.rd <- rd';
+        | Error n -> self#halt n
+        | Ok [] ->
+          k`Any
+        | Ok available ->
           state.charset <- Encoding.choose_charset ~available ~acceptable;
           k (`One state.charset)
-        | Error n, rd' ->
-          state.rd <- rd';
-          self#halt n
 
     method private choose_encoding acceptable k =
-      resource#encodings_provided state.rd
+      DS.run state resource#encodings_provided
       >>= function
-        | Ok available, rd' ->
-          state.rd <- rd';
+        | Error n -> self#halt n
+        | Ok available ->
           state.encoding <- Encoding.choose ~available ~acceptable;
           k state.encoding
-        | Error n, rd' ->
-          state.rd <- rd';
-          self#halt n
 
     (** [run_op op] runs [op] with the current request and response
         information, and will perform any appropriate bookkeeping that needs to
         be done given the result. *)
-    method private run_op : 'a. ('a, 'body) op -> ('a -> (Code.status_code * Header.t * 'body) IO.t) -> (Code.status_code * Header.t * 'body) IO.t =
-      fun op k -> op state.rd
+    method private run_op : 'a. ('a, 'body) op -> ('a -> _) -> _ IO.t =
+      fun op k ->
+        DS.run state op
         >>= function
-          | Ok a, rd' ->
-            state.rd <- rd';
-            k a
-          | Error n, rd' ->
-            state.rd <- rd';
-            self#halt n
+          | Error n -> self#halt n
+          | Ok a -> k a
 
-    method private run_provider : 'body provider -> _ -> (Code.status_code * Header.t * 'body) IO.t =
-      fun provider k ->
-        provider state.rd
-        >>= function
-          | Ok resp_body, rd' ->
-            state.rd <- { rd' with Rd.resp_body };
-            k ()
-          | Error n , rd' ->
-            state.rd <- rd';
-            self#halt n
+    method private run_provider provider k =
+      DS.run state provider
+      >>= function
+        | Error n -> self#halt n
+        | Ok resp_body ->
+          state.rd <- { state.rd with Rd.resp_body };
+          k ()
 
     method private accept_helper k =
       let header =
