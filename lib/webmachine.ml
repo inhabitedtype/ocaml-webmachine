@@ -171,6 +171,9 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       | Some resp_body -> { rd with Rd.resp_body }
     in
     return (Error x, rd)
+  ;;
+
+  external identity : 'a -> 'a = "%identity"
 
   class virtual ['body] resource = object(self)
     constraint 'body = [> `Empty]
@@ -214,7 +217,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
     method charsets_provided (rd :'body Rd.t) : ((string * ('body -> 'body)) list result * 'body Rd.t) IO.t =
       continue [] rd
     method encodings_provided (rd :'body Rd.t) : ((string * ('body -> 'body)) list result * 'body Rd.t) IO.t =
-      continue ["identity", fun x -> x] rd
+      continue ["identity", identity] rd
     method variances (rd :'body Rd.t) : (string list result * 'body Rd.t) IO.t =
       continue [] rd
     method is_conflict (rd :'body Rd.t) : (bool result * 'body Rd.t) IO.t =
@@ -266,30 +269,29 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     let get_request_header t k = Header.get t.rd.req_headers k
     let get_response_header t k = Header.get t.rd.resp_headers k
+
     let set_response_header t k v =
       t.rd <- Rd.with_resp_headers (fun headers -> Header.replace headers k v) t.rd
     ;;
 
     let push_path t n = t.path <- n :: t.path
+
+    let encode_body t =
+      let option_value_map v ~default ~f =
+        match v with
+        | None -> default
+        | Some x -> f x
+      in
+      let cf = option_value_map ~default:identity ~f:snd t.charset in
+      let ef = option_value_map ~default:identity ~f:snd t.encoding in
+      t.rd <- { t.rd with Rd.resp_body = ef (cf t.rd.resp_body) }
+    ;;
   end
 
   class ['body] logic ~(resource:'body resource) ~rd:(initial_rd:'body Rd.t) () = object(self)
     constraint 'body = [> `Empty]
 
     val state = DS.create initial_rd
-
-    method private encode_body =
-      let cf =
-        match state.charset with
-        | None        -> fun x -> x
-        | Some (_, f) ->  f
-      in
-      let ef =
-        match state.encoding with
-        | None        -> fun x -> x
-        | Some (_, f) -> f
-      in
-      state.rd <- { state.rd with Rd.resp_body = ef (cf state.rd.resp_body) }
 
     method private respond ~status () : (Code.status_code * Header.t * 'body) IO.t =
       self#run_op resource#finish_request
@@ -363,8 +365,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         | Some(_, of_content) ->
           self#run_op of_content
           >>~ function complete ->
-            if complete then
-              self#encode_body;
+            if complete then DS.encode_body state;
             k complete
 
     method run : (Code.status_code * Header.t * 'body * string list) IO.t =
@@ -838,10 +839,9 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       | false ->
         self#run_op resource#process_post >>~ fun executed ->
         if executed
-        then begin
-          self#encode_body;
-          stage2 ()
-        end
+        then (
+          DS.encode_body state;
+          stage2 ())
         else self#halt 500
 
     method v3n16 : (Code.status_code * Header.t * 'body) IO.t =
@@ -884,7 +884,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
           (* XXX(seliopou) last modified *)
           (* XXX(seliopou) expires *)
           self#run_provider to_content >>~ fun () ->
-          self#encode_body;
+          DS.encode_body state;
           self#v3o18b
       | _ ->
         self#v3o18b
