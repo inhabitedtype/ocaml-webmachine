@@ -264,6 +264,8 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       ; encoding = None
       }
 
+    let get_request_header t k = Header.get t.rd.req_headers k
+    let get_response_header t k = Header.get t.rd.resp_headers k
     let push_path t n = t.path <- n :: t.path
   end
 
@@ -287,12 +289,6 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method private set_response_header k v =
       state.rd <- Rd.with_resp_headers (fun headers -> Header.replace headers k v) state.rd
-
-    method private get_request_header k =
-      Header.get state.rd.req_headers k
-
-    method private get_response_header k =
-      Header.get state.rd.resp_headers k
 
     method private respond ~status () : (Code.status_code * Header.t * 'body) IO.t =
       self#run_op resource#finish_request
@@ -355,7 +351,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method private accept_helper k =
       let header =
-        match self#get_request_header "content-type" with
+        match DS.get_request_header state "content-type" with
         | None       -> Some "application/octet-stream"
         | Some type_ -> Some type_
       in
@@ -484,7 +480,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       DS.push_path state "v3c3";
       self#run_op resource#content_types_provided
       >>~ fun content_types ->
-        match self#get_request_header "accept" with
+        match DS.get_request_header state "accept" with
         | None   ->
           begin match content_types with
           | []   -> self#halt 500
@@ -498,7 +494,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       DS.push_path state "v3c4";
       self#run_op resource#content_types_provided
       >>~ fun content_types ->
-        let header = self#get_request_header "accept" in
+        let header = DS.get_request_header state "accept" in
         match Mediatype.match_header content_types header with
         | None   -> self#halt 406
         | Some t ->
@@ -507,7 +503,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3d4 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3d4";
-      match self#get_request_header "accept-language" with
+      match DS.get_request_header state "accept-language" with
       | None   -> self#v3e5
       | Some _ -> self#v3d5
 
@@ -520,7 +516,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3e5 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3e5";
-      match self#get_request_header "accept-charset" with
+      match DS.get_request_header state "accept-charset" with
       | None   ->
         begin self#choose_charset (Accept.charsets None)
         >>~ function
@@ -532,7 +528,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3e6 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3e6";
-      match self#get_request_header "accept-charset" with
+      match DS.get_request_header state "accept-charset" with
       | None            -> assert false
       | Some acceptable ->
         begin self#choose_charset (Accept.charsets (Some acceptable))
@@ -555,7 +551,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         | Some (charset,_) -> Printf.sprintf "%s; charset=%s" type_ charset
       in
       self#set_response_header "Content-Type" value;
-      match self#get_request_header "accept-encoding" with
+      match DS.get_request_header state "accept-encoding" with
       | None ->
         let acceptable = Accept.encodings (Some "identity;q=1.0,*;q=0.5") in
         self#choose_encoding acceptable >>~ fun chosen ->
@@ -567,7 +563,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3f7 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3f7";
-      match self#get_request_header "accept-encoding" with
+      match DS.get_request_header state "accept-encoding" with
       | None            -> assert false
       | Some acceptable ->
         let acceptable = Accept.encodings (Some acceptable) in
@@ -592,20 +588,20 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3g8 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3g8";
-      match self#get_request_header "if-match" with
+      match DS.get_request_header state "if-match" with
       | None   -> self#v3h10
       | Some _ -> self#v3g9
 
     method v3g9 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3g9";
-      match self#get_request_header "if-match" with
+      match DS.get_request_header state "if-match" with
       | None     -> assert false
       | Some "*" -> self#v3h10
       | Some _   -> self#v3g11
 
     method v3g11 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3g11";
-      match self#get_request_header "if-match" with
+      match DS.get_request_header state "if-match" with
       | None      -> assert false
       | Some if_match_header ->
         self#run_op resource#generate_etag
@@ -619,19 +615,19 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3h7 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3h7";
-      match self#get_request_header "if-match" with
+      match DS.get_request_header state "if-match" with
       | None   -> self#v3i7
       | Some _ -> self#halt 412
 
     method v3h10 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3h10";
-      match self#get_request_header "if-unmodified-since" with
+      match DS.get_request_header state "if-unmodified-since" with
       | None   -> self#v3i12
       | Some _ -> self#v3h11
 
     method v3h11 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3h11";
-      let d = self#get_request_header "if-unmodified-since" in
+      let d = DS.get_request_header state "if-unmodified-since" in
       match d with
       | None -> self#v3i12
       | Some d' ->
@@ -642,7 +638,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
     method v3h12 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3h12";
       try
-        let u_mod = self#get_request_header "if-unmodified-since" in
+        let u_mod = DS.get_request_header state "if-unmodified-since" in
         self#run_op resource#last_modified
         >>~ fun l_mod ->
         match (u_mod, l_mod) with
@@ -672,13 +668,13 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3i12 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3i12";
-      match self#get_request_header "if-none-match" with
+      match DS.get_request_header state "if-none-match" with
       | None   -> self#v3l13
       | Some _ -> self#v3i13
 
     method v3i13 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3i13";
-      match self#get_request_header "if-none-match" with
+      match DS.get_request_header state "if-none-match" with
       | None     -> assert false
       | Some "*" -> self#v3j18
       | Some _   -> self#v3k13
@@ -701,7 +697,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3k13 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3k13";
-      match self#get_request_header "if-none-match" with
+      match DS.get_request_header state "if-none-match" with
       | None      -> assert false
       | Some if_none_match_header ->
         self#run_op resource#generate_etag
@@ -731,13 +727,13 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3l13 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3l13";
-      match self#get_request_header "if-modified-since" with
+      match DS.get_request_header state "if-modified-since" with
       | None   -> self#v3m16
       | Some _ -> self#v3l14
 
     method v3l14 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3l14";
-      match (self#get_request_header "if-modified-since") with
+      match (DS.get_request_header state "if-modified-since") with
       | None -> self#v3m16
       | Some date ->
          match (Rfc1123.parse_date date) with
@@ -747,7 +743,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
     method v3l15 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3l15";
       let now = Clock.now () in
-      match (self#get_request_header "if-modified-since") with
+      match (DS.get_request_header state "if-modified-since") with
       | None -> self#v3l17
       | Some date ->
          match Rfc1123.parse_date date with
@@ -759,7 +755,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
     method v3l17 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3l17";
       try
-        let u_mod = self#get_request_header "if-modified-since" in
+        let u_mod = DS.get_request_header state "if-modified-since" in
         self#run_op resource#last_modified
         >>~ fun l_mod ->
             match (u_mod, l_mod) with
@@ -820,7 +816,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       let stage2 (type a) (_ : a) =
         if state.rd.resp_redirect
         then
-          (match self#get_response_header "location" with
+          (match DS.get_response_header state "location" with
            | None   -> self#halt 500
            | Some _ -> self#respond ~status:`See_other ())
         else self#v3p11
@@ -913,7 +909,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     method v3p11 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3p11";
-      match self#get_response_header "location" with
+      match DS.get_response_header state "location" with
       | None   -> self#v3o20
       | Some _ -> self#respond ~status:`Created ()
   end
