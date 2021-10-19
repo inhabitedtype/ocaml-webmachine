@@ -300,13 +300,13 @@ module Make(IO:IO)(Clock:CLOCK) = struct
 
     val state = DS.create initial_rd
 
-    method private respond ~status () : (Code.status_code * Header.t * 'body) IO.t =
+    method private respond status : (Code.status_code * Header.t * 'body) IO.t =
       self#run_op resource#finish_request
       @@ fun () -> return (status, state.rd.resp_headers, state.rd.resp_body)
 
     method private halt code : (Code.status_code * Header.t * 'body) IO.t =
       let status = Code.status_of_code code in
-      self#respond ~status ()
+      self#respond status
 
     method private choose_charset acceptable k =
       (* XXX(seliopou): This breaks the {run_op} so watch out in the even that
@@ -470,7 +470,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         self#run_op resource#options
         @@ fun headers ->
           List.iter (fun (k, v) -> DS.set_response_header state k v) headers;
-          self#respond ~status:`OK ()
+          self#respond `OK
       | _ -> self#v3c3
 
     method v3c3 : (Code.status_code * Header.t * 'body) IO.t =
@@ -654,7 +654,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         | None     -> self#v3p3
         | Some uri ->
           DS.set_response_header state "Location" (Uri.to_string uri);
-          self#respond ~status:`Moved_permanently ()
+          self#respond `Moved_permanently
 
     method v3i7 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3i7";
@@ -690,7 +690,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         | None     -> self#v3l5
         | Some uri ->
           DS.set_response_header state "location" (Uri.to_string uri);
-          self#respond ~status:`Moved_permanently ()
+          self#respond `Moved_permanently
 
     method v3k13 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3k13";
@@ -714,7 +714,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         | None     -> self#v3m5
         | Some uri ->
           DS.set_response_header state "location" (Uri.to_string uri);
-          self#respond ~status:`Temporary_redirect ()
+          self#respond `Temporary_redirect
 
     method v3l7 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3l7";
@@ -798,7 +798,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
           self#run_op resource#delete_completed
           @@ function
             | true  -> self#v3o20
-            | false -> self#respond ~status:`Accepted ()
+            | false -> self#respond `Accepted
         else
           self#halt 500
 
@@ -815,7 +815,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
         then
           (match DS.get_response_header state "location" with
            | None   -> self#halt 500
-           | Some _ -> self#respond ~status:`See_other ())
+           | Some _ -> self#respond `See_other)
         else self#v3p11
       in
       DS.push_path state "v3n11";
@@ -888,12 +888,12 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       self#run_op resource#multiple_choices
       @@ function
         | true  -> self#halt 300
-        | false -> self#respond ~status:`OK ()
+        | false -> self#respond `OK
 
     method v3o20 : (Code.status_code * Header.t * 'body) IO.t =
       DS.push_path state "v3o20";
       match state.rd.resp_body with
-      | `Empty -> self#respond ~status:`No_content ()
+      | `Empty -> self#respond `No_content
       | _      -> self#v3o18
 
     method v3p3 : (Code.status_code * Header.t * 'body) IO.t =
@@ -907,7 +907,7 @@ module Make(IO:IO)(Clock:CLOCK) = struct
       DS.push_path state "v3p11";
       match DS.get_response_header state "location" with
       | None   -> self#v3o20
-      | Some _ -> self#respond ~status:`Created ()
+      | Some _ -> self#respond `Created
   end
 
   let to_handler ?dispatch_path ?path_info ~resource ~body ~request () =
